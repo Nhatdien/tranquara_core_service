@@ -1,0 +1,32 @@
+services:
+  core_service: 
+    build: 
+      context: .
+      dockerfile: ./Dockerfile.yml
+    ports: 
+      - "4000:4000"
+    networks:
+      - tranquara-network
+    # depends_on:
+    #   rabbitmq:
+    #     condition: service_healthy
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: rabbitmq
+  #   ports:
+  #     - '5672:5672'
+  #     - '15672:15672'
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: guest
+  #     RABBITMQ_DEFAULT_PASS: guest
+  #   healthcheck:
+  #     test: rabbitmq-diagnostics -q ping
+  #     interval: 15s
+  #     timeout: 20s
+  #     retries: 4
+
+
+networks:
+  tranquara-network:
+    external: true
+
