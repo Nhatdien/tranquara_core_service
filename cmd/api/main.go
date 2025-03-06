@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"tranquara.net/internal/data"
 )
 
 const version = "1.0.0"
@@ -31,6 +32,7 @@ type application struct {
 	config        config
 	logger        *log.Logger
 	rabbitchannel *amqp.Channel
+	models        data.Models
 }
 
 func main() {
@@ -76,6 +78,7 @@ func main() {
 		config:        cfg,
 		logger:        logger,
 		rabbitchannel: channel,
+		models:        data.NewModels(db),
 	}
 
 	_, err = channel.QueueDeclare("ai_tasks", false, false, false, false, nil)
@@ -91,13 +94,9 @@ func main() {
 	log.Println("Successfully connected to RabbitMQ")
 	log.Println("Waiting for messages")
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/v1/healthcheck", app.healthcheckHandler)
-	mux.HandleFunc("/v1/provide_guidence", app.ProvideGuidenceHandler)
-
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      mux,
+		Handler:      app.routes(),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,

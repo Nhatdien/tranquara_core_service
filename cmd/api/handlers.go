@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
 
 	"tranquara.net/internal"
@@ -17,9 +15,20 @@ import (
 func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Request) {
 	// Publish the message to the RabbitMQ
 
-	err := internal.PublishJson(app.rabbitchannel, "", "ai_tasks", json.Unmarshal(io.ReadAll(r.Body)))
+	var input struct {
+		CurrentWeek        int    `json:"current_week"`
+		ChatbotInteraction string `json:"chatbot_interaction"`
+		EmotionTracking    string `json:"emotion_tracking"`
+	}
+
+	err := app.readJson(w, r, &input)
 	if err != nil {
-		http.Error(w, "Failed to publish message", http.StatusInternalServerError)
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	err = internal.PublishJson(app.rabbitchannel, "", "ai_tasks", input)
+	if err != nil {
+		app.errorResponse(w, r, http.StatusInternalServerError, "Failed to publish message")
 		return
 	}
 
@@ -34,7 +43,7 @@ func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Re
 		nil,           // arguments
 	)
 	if err != nil {
-		http.Error(w, "Failed to consume message", http.StatusInternalServerError)
+		app.errorResponse(w, r, http.StatusInternalServerError, "Failed to consume message")
 		return
 	}
 
@@ -43,6 +52,7 @@ func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Re
 	case message := <-messages:
 		// Write the received message directly to the response
 		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
 		w.Write(message.Body)
 		message.Ack(false)
 	case <-r.Context().Done():
