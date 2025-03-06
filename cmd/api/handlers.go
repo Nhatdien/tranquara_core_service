@@ -27,7 +27,7 @@ func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Re
 	messages, err := app.rabbitchannel.Consume(
 		"ai_response", // queue name
 		"",            // consumer
-		true,          // auto-ack
+		false,         // auto-ack
 		false,         // exclusive
 		false,         // no local
 		false,         // no wait
@@ -44,6 +44,7 @@ func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Re
 		// Write the received message directly to the response
 		w.WriteHeader(http.StatusOK)
 		w.Write(message.Body)
+		message.Ack(false)
 	case <-r.Context().Done():
 		http.Error(w, "Request cancelled", http.StatusRequestTimeout)
 	}

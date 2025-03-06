@@ -24,7 +24,7 @@ func Cosumer(ch *amqp.Channel, queue_name string, callback func(message amqp.Del
 	messages, err := ch.Consume(
 		queue_name, // queue name
 		"",         // consumer
-		true,       // auto-ack
+		false,      // auto-ack
 		false,      // exclusive
 		false,      // no local
 		false,      // no wait

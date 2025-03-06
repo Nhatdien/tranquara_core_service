@@ -3,28 +3,54 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile.yml
+    env_file: ".env"
+   
     ports: 
       - "4000:4000"
+    depends_on:
+       db:
+          condition: service_healthy
     networks:
       - tranquara-network
-    # depends_on:
-    #   rabbitmq:
-    #     condition: service_healthy
-  # rabbitmq:
-  #   image: rabbitmq:3-management
-  #   container_name: rabbitmq
-  #   ports:
-  #     - '5672:5672'
-  #     - '15672:15672'
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: guest
-  #     RABBITMQ_DEFAULT_PASS: guest
-  #   healthcheck:
-  #     test: rabbitmq-diagnostics -q ping
-  #     interval: 15s
-  #     timeout: 20s
-  #     retries: 4
 
+  db:
+      image: postgres
+      environment:
+          POSTGRES_DB: tranquara_core
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: Nhatdien123
+      ports:
+          - "5432"
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready", "-d", "tranquara_core"]
+        interval: 10s
+        timeout: 3s
+        retries: 3
+      volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+      networks:
+      - tranquara-network
+  migrate:
+      image: migrate/migrate
+      volumes:
+          - ./migrations:/migrations
+      command: ["-path", "/migrations", "-database",  "postgres://postgres:Nhatdien123@db:5432/tranquara_core?sslmode=disable", "up"]
+      links: 
+          - db
+      networks:
+      - tranquara-network
+      depends_on:
+        - core_service
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+    networks:
+      - tranquara-network
 
 networks:
   tranquara-network:
