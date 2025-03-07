@@ -47,13 +47,14 @@ func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	headers := make(http.Header)
+	headers.Set("Content-Type", "application/json")
 	// Wait for the message synchronously
 	select {
 	case message := <-messages:
 		// Write the received message directly to the response
 		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(message.Body)
+		app.writeJson(w, http.StatusOK, message.Body, headers)
 		message.Ack(false)
 	case <-r.Context().Done():
 		http.Error(w, "Request cancelled", http.StatusRequestTimeout)
