@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 
 	"tranquara.net/internal"
@@ -19,6 +22,11 @@ func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Re
 		CurrentWeek        int    `json:"current_week"`
 		ChatbotInteraction string `json:"chatbot_interaction"`
 		EmotionTracking    string `json:"emotion_tracking"`
+	}
+
+	var aiResponse struct {
+		SuggestMindfulnessTip string `json:"suggest_mindfulness_tip"`
+		Explaination          string `json:"explaination"`
 	}
 
 	err := app.readJson(w, r, &input)
@@ -47,16 +55,32 @@ func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	headers := make(http.Header)
-	headers.Set("Content-Type", "application/json")
+	// headers := make(http.Header)
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	// w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		app.errorResponse(w, r, http.StatusInternalServerError, "Streaming not supported")
+		return
+	}
 	// Wait for the message synchronously
-	select {
-	case message := <-messages:
-		// Write the received message directly to the response
-		w.WriteHeader(http.StatusOK)
-		app.writeJson(w, http.StatusOK, message.Body, headers)
-		message.Ack(false)
-	case <-r.Context().Done():
-		http.Error(w, "Request cancelled", http.StatusRequestTimeout)
+	for msg := range messages {
+		if err := json.Unmarshal(msg.Body, &aiResponse); err != nil {
+			log.Printf("❌ Error parsing message: %v", err)
+			continue
+		}
+		// Marshal the JSON response
+		jsonData, err := json.Marshal(aiResponse)
+		if err != nil {
+			log.Printf("❌ Error marshalling JSON: %v", err)
+			continue
+		}
+
+		// Send JSON as SSE data
+		fmt.Fprintf(w, "data: %s\n\n", jsonData)
+		flusher.Flush()
+		log.Printf("✅ Streamed JSON response: %s", jsonData)
 	}
 }

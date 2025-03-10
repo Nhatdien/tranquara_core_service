@@ -1,6 +1,9 @@
 package validator
 
-import "regexp"
+import (
+	"regexp"
+	"slices"
+)
 
 type Validator struct {
     Errors map[string]string
@@ -21,13 +24,8 @@ type Validator struct {
         v.AddError(key, message)
     }
  }
- func In(value string, list ...string) bool {
-    for i := range list {
-        if value == list[i] {
-            return true
-        }
-    }
-    return false
+ func In(value string, list ...string) bool {   
+   return slices.Contains(list, value)
  }
  
  func Matches(value string, rx *regexp.Regexp) bool {

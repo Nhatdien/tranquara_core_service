@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 )
 
 type Exercise struct {
@@ -30,10 +31,44 @@ func (e ExerciseModel) Insert(exercise *Exercise) error {
 }
 
 func (e ExerciseModel) Get(id int64) (*Exercise, error) {
-	return nil, nil
+	query := `
+				SELECT * FROM exercises 
+				WHERE exercise_id = $1
+			`
+
+	var exercise Exercise
+
+	err := e.DB.QueryRow(query, id).Scan(
+		&exercise.ExerciseID,
+		&exercise.Title,
+		&exercise.Description,
+		&exercise.DurationMinutes,
+		&exercise.ExerciseType,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &exercise, nil
 }
-func (e ExerciseModel) Update(exercise Exercise) error {
-	return nil
+func (e ExerciseModel) Update(exercise *Exercise) error {
+	query := `
+			UPDATE exercises
+			SET title = $1, description = $2, duration_minutes = $3, exercise_type = $4
+			WHERE exercise_id = $5
+			RETURNING *
+	`
+
+	args := []any{exercise.Title, exercise.Description, exercise.DurationMinutes, exercise.ExerciseType, exercise.ExerciseID}
+	argsResponse := []any{&exercise.ExerciseID, &exercise.Title, &exercise.Description, &exercise.DurationMinutes, &exercise.ExerciseType}
+
+	return e.DB.QueryRow(query, args...).Scan(argsResponse...)
 }
 func (e ExerciseModel) Delete(id int64) error {
 	return nil
