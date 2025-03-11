@@ -29,7 +29,7 @@ func (app *application) writeJson(w http.ResponseWriter, status int, data interf
 	return nil
 }
 
-func (app *application) readJson(w http.ResponseWriter, r *http.Request, data interface{}) error {
+func (app *application) readJson(w http.ResponseWriter, r *http.Request, data any) error {
 	err := json.NewDecoder(r.Body).Decode(data)
 	if err != nil {
 		var syntaxError *json.SyntaxError

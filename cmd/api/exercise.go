@@ -74,10 +74,10 @@ func (app *application) updateExerciseHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	var input struct {
-		Title           string `json:"title"`
-		Description     string `json:"description"`
-		DurationMinutes uint   `json:"duration_minutes"`
-		ExerciseType    string `json:"exercise_type"`
+		Title           *string `json:"title"`
+		Description     *string `json:"description"`
+		DurationMinutes *uint   `json:"duration_minutes"`
+		ExerciseType    *string `json:"exercise_type"`
 	}
 
 	err = app.readJson(w, r, &input)
@@ -96,10 +96,22 @@ func (app *application) updateExerciseHandler(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	exercise.Title = input.Title
-	exercise.Description = input.Description
-	exercise.DurationMinutes = input.DurationMinutes
-	exercise.ExerciseType = input.ExerciseType
+	if input.Title != nil {
+
+		exercise.Title = *input.Title
+	}
+
+	if input.Description != nil {
+		exercise.Description = *input.Description
+	}
+
+	if input.DurationMinutes != nil {
+		exercise.DurationMinutes = *input.DurationMinutes
+	}
+
+	if input.ExerciseType != nil {
+		exercise.ExerciseType = *input.ExerciseType
+	}
 
 	app.logger.Print(input)
 	app.logger.Print(exercise)
@@ -113,4 +125,21 @@ func (app *application) updateExerciseHandler(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
+}
+
+func (app *application) deleteExerciseHandler(w http.ResponseWriter, r *http.Request) {
+
+	exerciseID, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundRespond(w, r)
+		return
+	}
+
+	err = app.models.Exercise.Delete(exerciseID)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	fmt.Fprintf(w, "Exercise id: %d deleted", exerciseID)
 }
