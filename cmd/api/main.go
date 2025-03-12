@@ -15,6 +15,8 @@ import (
 	"tranquara.net/internal/data"
 )
 
+type envolope map[string]any
+
 const version = "1.0.0"
 
 type config struct {

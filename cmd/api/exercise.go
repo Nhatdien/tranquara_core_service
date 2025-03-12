@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"tranquara.net/internal/data"
+	"tranquara.net/internal/validator"
 )
 
 func (app *application) showExerciseHanlder(w http.ResponseWriter, r *http.Request) {
@@ -22,9 +23,10 @@ func (app *application) showExerciseHanlder(w http.ResponseWriter, r *http.Reque
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
+		return
 	}
 
-	err = app.writeJson(w, http.StatusOK, exercise, nil)
+	err = app.writeJson(w, http.StatusOK, envolope{"exercise": exercise}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
@@ -142,4 +144,45 @@ func (app *application) deleteExerciseHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	fmt.Fprintf(w, "Exercise id: %d deleted", exerciseID)
+}
+
+func (app *application) listExerciseHandler(w http.ResponseWriter, r *http.Request) {
+
+	v := validator.New()
+
+	qs := r.URL.Query()
+
+	var input struct {
+		Title        string
+		ExerciseType string
+		data.Filter
+	}
+
+	input.Title = app.readString(qs, "title", "")
+	input.ExerciseType = app.readString(qs, "exercise_type", "")
+
+	input.Page = app.readInt(qs, "page", 1, v)
+	input.PageSize = app.readInt(qs, "page_size", 20, v)
+	input.Sort = app.readString(qs, "sort", "exercise_id")
+
+	input.SortSafelist = []string{"exercise_id", "title", "exercise_type", "-exercise_id", "-title", "-exercise_type"}
+
+	if data.ValidateFilter(v, input.Filter); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	exercises, metadata, err := app.models.Exercise.GetList(input.Title, input.ExerciseType, input.Filter)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJson(w, http.StatusOK, envolope{"metadata": metadata, "exercises": exercises}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	// Dump the contents of the input struct in a HTTP response.
+
 }

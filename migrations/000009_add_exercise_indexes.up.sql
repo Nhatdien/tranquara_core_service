@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS exercise_title_idx ON exercises USING GIN (to_tsvector('simple', title));
