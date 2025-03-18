@@ -115,9 +115,6 @@ func (app *application) updateExerciseHandler(w http.ResponseWriter, r *http.Req
 		exercise.ExerciseType = *input.ExerciseType
 	}
 
-	app.logger.Print(input)
-	app.logger.Print(exercise)
-
 	err = app.models.Exercise.Update(exercise)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

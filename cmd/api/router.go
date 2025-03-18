@@ -6,7 +6,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func (app *application) routes() *httprouter.Router {
+func (app *application) routes() http.Handler {
 
 	router := httprouter.New()
 
@@ -25,5 +25,5 @@ func (app *application) routes() *httprouter.Router {
 	//AI guidence handler
 	router.HandlerFunc(http.MethodPost, "/v1/provide_guidence", app.ProvideGuidenceHandler)
 
-	return router
+	return app.recoverPanic(app.rateLimit(router))
 }
