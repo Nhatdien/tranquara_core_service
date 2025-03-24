@@ -24,15 +24,16 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 }
 
 func (app *application) rateLimit(next http.Handler) http.Handler {
-
+	// Define a client struct to hold the rate limiter and last seen time for each
+	// client.
 	type client struct {
 		limiter  *rate.Limiter
 		lastSeen time.Time
 	}
-
 	var (
-		mu      sync.Mutex
-		clients map[string]*client
+		mu sync.Mutex
+		// Update the map so the values are pointers to a client struct.
+		clients = make(map[string]*client)
 	)
 
 	go func() {
@@ -42,36 +43,34 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 			mu.Lock()
 
 			for ip, client := range clients {
-				if time.Since(client.lastSeen) >= 3*time.Minute {
-					delete(clients, ip)
+				if time.Since(client.lastSeen) > 3*time.Minute {
+					if time.Since(client.lastSeen) > 3*time.Minute {
+						delete(clients, ip)
+					}
 				}
+				mu.Unlock()
 			}
 		}
 	}()
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if app.config.limiter.enabled {
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				app.serverErrorResponse(w, r, err)
-				return
-			}
-			mu.Lock()
-			if _, found := clients[ip]; !found {
-				clients[ip] = &client{
-					// Use the requests-per-second and burst values from the config
-					// struct.
-					limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst),
-				}
-			}
-			clients[ip].lastSeen = time.Now()
-			if !clients[ip].limiter.Allow() {
-				mu.Unlock()
-				app.rateLimitExceedResponse(w, r)
-				return
-			}
-			mu.Unlock()
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
 		}
+		mu.Lock()
+		if _, found := clients[ip]; !found {
+
+			clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
+		}
+
+		clients[ip].lastSeen = time.Now()
+		if !clients[ip].limiter.Allow() {
+			mu.Unlock()
+			app.rateLimitExceedResponse(w, r)
+			return
+		}
+		mu.Unlock()
 		next.ServeHTTP(w, r)
 	})
 }

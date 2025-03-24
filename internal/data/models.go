@@ -5,19 +5,19 @@ import (
 	"errors"
 )
 
-
-
 var (
 	ErrRecordNotFound = errors.New("record not found")
 )
 
 type Models struct {
 	Exercise ExerciseModel
+	User     UserModel
 }
 
 func NewModels(db *sql.DB) Models {
 	return Models{
 		Exercise: ExerciseModel{DB: db},
+		User:     UserModel{DB: db},
 	}
 
 }

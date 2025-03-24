@@ -22,6 +22,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/exercise/:id", app.updateExerciseHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/exercise/:id", app.deleteExerciseHandler)
 
+	//Users handler
+	router.HandlerFunc(http.MethodPost, "/v1/user", app.registerUserHandler)
 	//AI guidence handler
 	router.HandlerFunc(http.MethodPost, "/v1/provide_guidence", app.ProvideGuidenceHandler)
 
