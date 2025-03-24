@@ -40,7 +40,7 @@ func (u UserModel) Insert(user *User) error {
 				RETURNING user_id, email, full_name, age, activated, created_at
 				`
 
-	arg := []any{user.Email, user.Password.hashedPassword, user.FullName, user.Age, user.Activated, user.CreatedAt}
+	arg := []any{user.Email, user.Password.hashedPassword, user.FullName, user.Age, user.Activated}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

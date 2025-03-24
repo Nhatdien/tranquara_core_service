@@ -69,8 +69,8 @@ func main() {
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 
-	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
-	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "672fbddef5042d", "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "1cbbb17d7da071", "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Tranquara <no-reply@tranquara.nhattran.net>", "SMTP sender")
