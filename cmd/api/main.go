@@ -4,16 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	_ "github.com/lib/pq"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"tranquara.net/internal/data"
 	"tranquara.net/internal/jsonlog"
+	"tranquara.net/internal/mailer"
 )
 
 type envolope map[string]any
@@ -30,10 +30,17 @@ type config struct {
 		maxIdleTime  string
 	}
 	limiter struct {
-        rps     float64
-        burst   int
-        enabled bool
-    }
+		rps     float64
+		burst   int
+		enabled bool
+	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 type application struct {
@@ -41,6 +48,8 @@ type application struct {
 	logger        *jsonlog.Logger
 	rabbitchannel *amqp.Channel
 	models        data.Models
+	mailer        mailer.Mailer
+	wg            sync.WaitGroup
 }
 
 func main() {
@@ -56,10 +65,16 @@ func main() {
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "Postgres max idle connection")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "Postgres conn max idle time")
 
-
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
-    flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
-    flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
+	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "672fbddef5042d", "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "1cbbb17d7da071", "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Tranquara <no-reply@tranquara.nhattran.net>", "SMTP sender")
+
 	flag.Parse()
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
@@ -91,6 +106,7 @@ func main() {
 		logger:        logger,
 		rabbitchannel: channel,
 		models:        data.NewModels(db),
+		mailer:        mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	_, err = channel.QueueDeclare("ai_tasks", false, false, false, false, nil)
@@ -106,20 +122,7 @@ func main() {
 	log.Println("Successfully connected to RabbitMQ")
 	log.Println("Waiting for messages")
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		ErrorLog:     log.New(logger, "", 0),
-		Handler:      app.routes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-	}
-
-	logger.PrintInfo("starting server", map[string]string{
-		"addr": srv.Addr,
-		"env":  cfg.env,
-	})
-	srv.ListenAndServe()
+	err = app.serve()
 	logger.PrintFatal(err, nil)
 }
 
