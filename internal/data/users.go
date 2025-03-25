@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"net/mail"
@@ -104,7 +105,6 @@ func (m UserModel) Update(user *User) error {
 		user.UserID,
 		user.Email,
 		user.FullName,
-		user.Email,
 		user.Password.hashedPassword,
 		user.Age,
 		user.Activated,
@@ -127,6 +127,45 @@ func (m UserModel) Update(user *User) error {
 		}
 	}
 	return nil
+}
+
+func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
+	// Calculate the SHA-256 hash of the plaintext token provided by the client.
+	// Remember that this returns a byte *array* with length 32, not a slice.
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+	// Set up the SQL query.
+	query := `
+        SELECT users.user_id, users.full_name, users.age,  users.email, users.activated, users.created_at
+        FROM users
+        INNER JOIN tokens
+        ON users.user_id = tokens.user_id
+        WHERE tokens.hash = $1
+        AND tokens.scope = $2 
+        AND tokens.expiry > $3`
+
+	args := []interface{}{tokenHash[:], tokenScope, time.Now()}
+	var user User
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(
+		&user.UserID,
+		&user.FullName,
+		&user.Age,
+		&user.Email,
+		&user.Activated,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	// Return the matching user.
+	return &user, nil
 }
 
 func (p *Password) Set(plainTextPassword string) error {

@@ -24,6 +24,7 @@ func (app *application) routes() http.Handler {
 
 	//Users handler
 	router.HandlerFunc(http.MethodPost, "/v1/user", app.registerUserHandler)
+	router.HandlerFunc(http.MethodPut, "/v1/user/activate", app.activateUserHandler)
 	//AI guidence handler
 	router.HandlerFunc(http.MethodPost, "/v1/provide_guidence", app.ProvideGuidenceHandler)
 
