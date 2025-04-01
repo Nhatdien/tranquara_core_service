@@ -30,6 +30,25 @@ services:
       - ./postgres-data:/var/lib/postgresql/data
       networks:
       - tranquara-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.6
+    environment: 
+    - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+    - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+    - KC_HTTP_PORT=4200
+    ports:
+      - "4200:4200"
+    command: "start-dev"
+    networks:
+      - tranquara-network
+    volumes:
+      - ./keycloak-data/data:/opt/keycloak/data
+      - ./keycloak-data/conf:/opt/keycloak/conf
+      - ./keycloak-data/themes:/opt/keycloak/themes
+      - ./keycloak-data/providers:/opt/keycloak/providers
+    depends_on:
+      - db
   migrate:
       image: migrate/migrate
       volumes:
