@@ -22,11 +22,10 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/exercise/:id", app.updateExerciseHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/exercise/:id", app.deleteExerciseHandler)
 
-	//Users handler
-	router.HandlerFunc(http.MethodPost, "/v1/user", app.registerUserHandler)
-	router.HandlerFunc(http.MethodPut, "/v1/user/activate", app.activateUserHandler)
+	//User completed exercise
+	router.HandlerFunc(http.MethodPost, "/v1/user_completed_exercise", app.authMiddleWare(app.createUserCompletedExerciseHandler))
 	//AI guidence handler
 	router.HandlerFunc(http.MethodPost, "/v1/provide_guidence", app.ProvideGuidenceHandler)
 
-	return app.recoverPanic(app.rateLimit(router))
+	return app.recoverPanic(app.rateLimit(app.testPostMiddleWare(router)))
 }

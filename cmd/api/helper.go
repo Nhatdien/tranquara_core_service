@@ -1,16 +1,19 @@
 package main
 
 import (
+	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 
-	
 	"strings"
+
+	"github.com/golang-jwt/jwt"
 
 	"github.com/julienschmidt/httprouter"
 	"tranquara.net/internal/validator"
@@ -143,4 +146,18 @@ func (app *application) background(fn func()) {
 		fn()
 	}()
 
+}
+
+func (app *application) loadPublicKey(path string) (*rsa.PublicKey, error) {
+	pubBytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(pubBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return pubKey, nil
 }

@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/time/rate"
 )
 
@@ -73,4 +76,58 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		mu.Unlock()
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (app *application) testPostMiddleWare(previous http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		previous.ServeHTTP(w, r)
+
+		app.logger.PrintInfo("post-middleware called", nil)
+
+	})
+}
+
+const userCtxKey = "user"
+
+func (app *application) authMiddleWare(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		pubKey, err := app.loadPublicKey("/publicKey.pem")
+		if err != nil {
+			app.logger.PrintError(err, nil)
+			return
+		}
+
+		prefix := "Bearer "
+		cutBearerToken := strings.TrimPrefix(authHeader, prefix)
+		token, err := jwt.Parse(cutBearerToken, func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+				return nil, fmt.Errorf("error with signing method")
+			}
+
+			return pubKey, nil
+		})
+
+		if err != nil || !token.Valid {
+			app.errorResponse(w, r, http.StatusUnauthorized, "Invalid token")
+			return
+		}
+
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			ctx := context.WithValue(r.Context(), userCtxKey, claims)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		app.errorResponse(w, r, http.StatusUnauthorized, "Error when get claims")
+	})
+}
+
+func (app *application) GetUserFromContext(ctx context.Context) jwt.MapClaims {
+	claims, ok := ctx.Value(userCtxKey).(jwt.MapClaims)
+	if !ok {
+		return nil
+	}
+	return claims
 }
