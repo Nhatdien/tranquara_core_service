@@ -24,6 +24,8 @@ func (app *application) routes() http.Handler {
 
 	//User completed exercise
 	router.HandlerFunc(http.MethodPost, "/v1/user_completed_exercise", app.authMiddleWare(app.createUserCompletedExerciseHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/user_completed_exercise", app.authMiddleWare(app.listCompletedExerciseHandler))
+
 	//AI guidence handler
 	router.HandlerFunc(http.MethodPost, "/v1/provide_guidence", app.ProvideGuidenceHandler)
 

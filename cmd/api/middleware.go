@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"golang.org/x/time/rate"
 )
 
@@ -130,4 +131,10 @@ func (app *application) GetUserFromContext(ctx context.Context) jwt.MapClaims {
 		return nil
 	}
 	return claims
+}
+
+func (app *application) GetUserUUIDFromContext(ctx context.Context) (uuid.UUID, error) {
+	claims := ctx.Value(userCtxKey).(jwt.MapClaims)
+
+	return uuid.Parse(claims["sub"].(string))
 }

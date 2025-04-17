@@ -74,7 +74,7 @@ func (e ExerciseModel) GetList(title string, exerciseType string, filter Filter)
 				SELECT COUNT(*) OVER(),  exercise_id, title, description, duration_minutes, exercise_type  FROM exercises 
 				WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 				AND (LOWER(exercise_type) = LOWER($2) OR $2 = '')
-				ORDER BY %s %s, exercise_id ASC
+				ORDER BY %s %s
 				LIMIT $3 OFFSET $4
 			`, filter.sortColumn(), filter.sortDirection())
 
