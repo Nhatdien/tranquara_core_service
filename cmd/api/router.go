@@ -26,6 +26,10 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/user_completed_exercise", app.authMiddleWare(app.createUserCompletedExerciseHandler))
 	router.HandlerFunc(http.MethodGet, "/v1/user_completed_exercise", app.authMiddleWare(app.listCompletedExerciseHandler))
 
+	//User completed self guide activity
+	router.HandlerFunc(http.MethodPost, "/v1/user_self_guided_activitiy", app.authMiddleWare(app.createUserCompletedSelfGuideActivityHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/user_self_guided_activitiy", app.authMiddleWare(app.listCompletedSelfGuideActivityHandler))
+
 	//AI guidence handler
 	router.HandlerFunc(http.MethodPost, "/v1/provide_guidence", app.ProvideGuidenceHandler)
 

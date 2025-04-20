@@ -10,13 +10,12 @@ import (
 	"tranquara.net/internal/validator"
 )
 
-func (app *application) createUserCompletedExerciseHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) createUserCompletedSelfGuideActivityHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		UserId     uuid.UUID `json:"user_id"`
-		WeekNumber int       `json:"week_number"`
-		DayNumber  int       `json:"day_number"`
-		ExerciseId int       `json:"exercise_id"`
-		Notes      string    `json:"notes"`
+		UserId          uuid.UUID `json:"user_id"`
+		ExerciseId      int       `json:"exercise_id"`
+		DurationMinutes int       `json:"duration_minutes"`
+		Notes           string    `json:"notes"`
 	}
 
 	err := app.readJson(w, r, &input)
@@ -31,30 +30,29 @@ func (app *application) createUserCompletedExerciseHandler(w http.ResponseWriter
 		return
 	}
 
-	completedExercise := &data.UserCompletedExercise{
-		UserId:     userUUID,
-		WeekNumber: input.WeekNumber,
-		DayNumber:  input.DayNumber,
-		ExerciseId: input.ExerciseId,
-		Notes:      input.Notes,
+	completedSelfGuideActivity := &data.UserCompletedSelfGuideActivity{
+		UserId:          userUUID,
+		ExerciseId:      input.ExerciseId,
+		DurationMinutes: input.DurationMinutes,
+		Notes:           input.Notes,
 	}
 
-	err = app.models.UserCompletedExercise.Insert(completedExercise)
+	err = app.models.UserCompletedSelfGuideActivity.Insert(completedSelfGuideActivity)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 
 	header := make(http.Header)
-	header.Set("Content-Location", fmt.Sprintf("v1/user_completed_exercise/%d", completedExercise.Id))
+	header.Set("Content-Location", fmt.Sprintf("v1/user_self_guided_activity/%d", completedSelfGuideActivity.ActivityId))
 
-	err = app.writeJson(w, http.StatusCreated, completedExercise, header)
+	err = app.writeJson(w, http.StatusCreated, completedSelfGuideActivity, header)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
 }
 
-func (app *application) listCompletedExerciseHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) listCompletedSelfGuideActivityHandler(w http.ResponseWriter, r *http.Request) {
 
 	v := validator.New()
 
@@ -89,9 +87,9 @@ func (app *application) listCompletedExerciseHandler(w http.ResponseWriter, r *h
 
 	input.Page = app.readInt(qs, "page", 1, v)
 	input.PageSize = app.readInt(qs, "page_size", 20, v)
-	input.Sort = app.readString(qs, "sort", "id")
+	input.Sort = app.readString(qs, "sort", "-activity_id")
 
-	input.SortSafelist = []string{"id", "-id"}
+	input.SortSafelist = []string{"activity_id", "-activity_id"}
 
 	if data.ValidateFilter(v, input.Filter); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
@@ -104,13 +102,13 @@ func (app *application) listCompletedExerciseHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	completedExercises, metadata, err := app.models.UserCompletedExercise.GetList(input.FromTime, input.ToTime, userUUID, input.Filter)
+	completedSelfGuideActivities, metadata, err := app.models.UserCompletedSelfGuideActivity.GetList(input.FromTime, input.ToTime, userUUID, input.Filter)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 
-	err = app.writeJson(w, http.StatusOK, envolope{"metadata": metadata, "user_completed_exercises": completedExercises}, nil)
+	err = app.writeJson(w, http.StatusOK, envolope{"metadata": metadata, "user_self_guided_activitiies": completedSelfGuideActivities}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
