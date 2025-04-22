@@ -1,5 +1,5 @@
 CREATE TABLE user_information (
-    user_id INT PRIMARY KEY,
+    user_id UUID PRIMARY KEY,
     age     SMALLINT,
     kyc_answers JSONB,
     program_mode VARCHAR(50) CHECK (program_mode IN ('8-week', 'self-guided')),

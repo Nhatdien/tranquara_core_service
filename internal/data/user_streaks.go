@@ -16,7 +16,7 @@ type UserStreak struct {
 }
 
 type UserStreakModel struct {
-	db *sql.DB
+	DB *sql.DB
 }
 
 func (streak UserStreakModel) Get(userUuid uuid.UUID) (UserStreak, error) {
@@ -30,12 +30,12 @@ func (streak UserStreakModel) Get(userUuid uuid.UUID) (UserStreak, error) {
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := streak.db.QueryRowContext(context, query, args...).Scan(argsResponse...)
+	err := streak.DB.QueryRowContext(context, query, args...).Scan(argsResponse...)
 
 	return userStreak, err
 }
 
-func (streak UserStreakModel) Insert() (UserStreak, error) {
+func (streak UserStreakModel) Insert(userUUID uuid.UUID) (UserStreak, error) {
 	query := `INSERT INTO user_streaks (user_id)
 			  VALUES ($1)`
 
@@ -46,7 +46,7 @@ func (streak UserStreakModel) Insert() (UserStreak, error) {
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := streak.db.QueryRowContext(context, query, args...).Scan(argsResponse...)
+	err := streak.DB.QueryRowContext(context, query, args...).Scan(argsResponse...)
 
 	return userStreak, err
 }
@@ -75,5 +75,5 @@ func (streak UserStreakModel) UpdateOrReset(userUuid uuid.UUID) error {
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	return streak.db.QueryRowContext(context, query, userUuid).Scan()
+	return streak.DB.QueryRowContext(context, query, userUuid).Scan()
 }

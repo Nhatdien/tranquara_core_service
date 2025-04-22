@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type UserInformation struct {
-	UserID              int64                  `json:"user_id"`
+	UserID              uuid.UUID              `json:"user_id"`
 	Age                 int16                  `json:"age"`
 	KYCAnswers          map[string]interface{} `json:"kyc_answers"` // handles JSONB
 	ProgramMode         string                 `json:"program_mode"`
@@ -21,7 +23,7 @@ type UserInformationModel struct {
 	DB *sql.DB
 }
 
-func (m UserInformationModel) Get(userID int64) (*UserInformation, error) {
+func (m UserInformationModel) Get(userID uuid.UUID) (*UserInformation, error) {
 	query := `
 		SELECT user_id, age, kyc_answers, program_mode, daily_reminder_time, notification_enabled
 		FROM user_information

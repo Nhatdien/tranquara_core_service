@@ -14,6 +14,9 @@ type Models struct {
 	User                           UserModel
 	UserCompletedExercise          UserCompletedExerciseModel
 	UserCompletedSelfGuideActivity UserCompletedSelfGuideActivityModel
+	ProgramExercise                ProgramExerciseModel
+	UserInformation                UserInformationModel
+	UserStreak                     UserStreakModel
 }
 
 func NewModels(db *sql.DB) Models {
@@ -22,6 +25,9 @@ func NewModels(db *sql.DB) Models {
 		User:                           UserModel{DB: db},
 		UserCompletedExercise:          UserCompletedExerciseModel{DB: db},
 		UserCompletedSelfGuideActivity: UserCompletedSelfGuideActivityModel{DB: db},
+		ProgramExercise:                ProgramExerciseModel{DB: db},
+		UserInformation:                UserInformationModel{DB: db},
+		UserStreak:                     UserStreakModel{DB: db},
 	}
 
 }
