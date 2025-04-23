@@ -10,6 +10,7 @@ func (app *application) routes() http.Handler {
 
 	router := httprouter.New()
 
+
 	router.NotFound = http.HandlerFunc(app.notFoundRespond)
 	router.MethodNotAllowed = http.HandlerFunc(app.notFoundRespond)
 

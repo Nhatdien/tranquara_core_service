@@ -9,10 +9,10 @@ import (
 )
 
 type UserStreak struct {
-	UserId        uuid.UUID
-	CurrentStreak int8
-	LongestStreak int8
-	LastActive    time.Time
+	UserId        uuid.UUID `json:"user_id"`
+	CurrentStreak int8      `json:"current_streak"`
+	LongestStreak int8      `json:"longest_streak"`
+	LastActive    time.Time `json:"last_active"`
 }
 
 type UserStreakModel struct {
@@ -24,13 +24,12 @@ func (streak UserStreakModel) Get(userUuid uuid.UUID) (UserStreak, error) {
 			  WHERE user_id = $1`
 
 	var userStreak UserStreak
-	args := []any{userStreak.UserId}
 	argsResponse := []any{&userStreak.UserId, &userStreak.CurrentStreak, &userStreak.LongestStreak, &userStreak.LastActive}
 
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := streak.DB.QueryRowContext(context, query, args...).Scan(argsResponse...)
+	err := streak.DB.QueryRowContext(context, query, userUuid).Scan(argsResponse...)
 
 	return userStreak, err
 }
@@ -40,13 +39,12 @@ func (streak UserStreakModel) Insert(userUUID uuid.UUID) (UserStreak, error) {
 			  VALUES ($1)`
 
 	var userStreak UserStreak
-	args := []any{userStreak.UserId}
 	argsResponse := []any{&userStreak.UserId, &userStreak.CurrentStreak, &userStreak.LongestStreak, &userStreak.LastActive}
 
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := streak.DB.QueryRowContext(context, query, args...).Scan(argsResponse...)
+	err := streak.DB.QueryRowContext(context, query, userUUID).Scan(argsResponse...)
 
 	return userStreak, err
 }
@@ -75,5 +73,7 @@ func (streak UserStreakModel) UpdateOrReset(userUuid uuid.UUID) error {
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	return streak.DB.QueryRowContext(context, query, userUuid).Scan()
+	_, err := streak.DB.QueryContext(context, query, userUuid)
+
+	return err
 }
