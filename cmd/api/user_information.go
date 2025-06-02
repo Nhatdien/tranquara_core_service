@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -35,12 +34,19 @@ func (app *application) getUserInformationHandler(w http.ResponseWriter, r *http
 func (app *application) createUserInformationHandler(w http.ResponseWriter, r *http.Request) {
 	var input data.UserInformation
 
-	err := json.NewDecoder(r.Body).Decode(&input)
+	id, err := app.GetUserUUIDFromContext(r.Context())
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.readJson(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
+	input.UserID = id
 	err = app.models.UserInformation.Insert(&input)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -71,7 +77,7 @@ func (app *application) updateUserInformationHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	err = json.NewDecoder(r.Body).Decode(&info)
+	err = app.readJson(w, r, info)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
