@@ -10,24 +10,20 @@ var (
 )
 
 type Models struct {
-	Exercise                       ExerciseModel
-	User                           UserModel
-	UserCompletedExercise          UserCompletedExerciseModel
-	UserCompletedSelfGuideActivity UserCompletedSelfGuideActivityModel
-	ProgramExercise                ProgramExerciseModel
-	UserInformation                UserInformationModel
-	UserStreak                     UserStreakModel
+	Exercise              ExerciseModel
+	User                  UserModel
+	UserCompletedExercise UserCompletedExerciseModel
+	UserInformation       UserInformationModel
+	UserStreak            UserStreakModel
 }
 
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Exercise:                       ExerciseModel{DB: db},
-		User:                           UserModel{DB: db},
-		UserCompletedExercise:          UserCompletedExerciseModel{DB: db},
-		UserCompletedSelfGuideActivity: UserCompletedSelfGuideActivityModel{DB: db},
-		ProgramExercise:                ProgramExerciseModel{DB: db},
-		UserInformation:                UserInformationModel{DB: db},
-		UserStreak:                     UserStreakModel{DB: db},
+		Exercise:              ExerciseModel{DB: db},
+		User:                  UserModel{DB: db},
+		UserCompletedExercise: UserCompletedExerciseModel{DB: db},
+		UserInformation:       UserInformationModel{DB: db},
+		UserStreak:            UserStreakModel{DB: db},
 	}
 
 }
