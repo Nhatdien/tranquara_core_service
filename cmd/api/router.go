@@ -27,6 +27,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/user_completed_exercise", app.authMiddleWare(app.listCompletedExerciseHandler))
 
 	// router.HandlerFunc(http.MethodPut, "/v1/program_exercises/:id", app.authMiddleWare(app.updateProgramExerciseHandler))
+	//chat log routes
+	router.HandlerFunc(http.MethodGet, "/v1/guider_chatlogs", app.authMiddleWare(app.getChatLogHandler))
 
 	//User info routes
 	router.HandlerFunc(http.MethodGet, "/v1/user_information", app.authMiddleWare(app.getUserInformationHandler))

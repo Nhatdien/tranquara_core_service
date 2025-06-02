@@ -1,0 +1,70 @@
+package data
+
+import (
+	"context"
+	"database/sql"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type GuiderChatlog struct {
+	Id         uuid.UUID `json:"id"`
+	UserId     uuid.UUID `json:"user_id"`
+	SenderType string    `json:"sender_type"`
+	Message    string    `json:"message"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+type GuiderChatlogModel struct {
+	DB *sql.DB
+}
+
+func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, filter Filter) ([]*GuiderChatlog, Metadata, error) {
+	query := `SELECT COUNT(*) OVER(), id, user_id, sender_type, message, created_at FROM ai_guider_chatlog 
+			  WHERE user_id = $1
+			  ORDER_BY created_at ASC
+			  LIMIT $2 OFFSET $3`
+
+	var guiderChatlog GuiderChatlog
+
+	totalRecords := 0
+	argsResponse := []any{&totalRecords, &guiderChatlog.Id, &guiderChatlog.UserId, &guiderChatlog.SenderType, &guiderChatlog.Message, &guiderChatlog.CreatedAt}
+
+	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var guiderChatlogs []*GuiderChatlog
+
+	rows, err := chatlog.DB.QueryContext(context, query, userUuid, filter.limit(), filter.offset())
+	for rows.Next() {
+		var guiderChatlog *GuiderChatlog
+		rows.Scan(
+			argsResponse...,
+		)
+
+		guiderChatlogs = append(guiderChatlogs, guiderChatlog)
+	}
+
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+
+	metadata := calculateMetadata(totalRecords, filter.Page, filter.PageSize)
+	return guiderChatlogs, metadata, err
+}
+
+func (chatlog GuiderChatlogModel) Insert(userUUID uuid.UUID) (GuiderChatlog, error) {
+	query := `INSERT INTO ai_guider_chatlog  (user_id, sender_type, message)
+			  VALUES ($1, $2, $3)`
+
+	var guiderChatlog GuiderChatlog
+	argsResponse := []any{&guiderChatlog.UserId, &guiderChatlog.SenderType, &guiderChatlog.Message}
+
+	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := chatlog.DB.QueryRowContext(context, query, userUUID).Scan(argsResponse...)
+
+	return guiderChatlog, err
+}
