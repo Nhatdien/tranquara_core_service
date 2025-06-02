@@ -35,10 +35,10 @@ func (app *application) showExerciseHanlder(w http.ResponseWriter, r *http.Reque
 
 func (app *application) createExerciseHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Title           string `json:"title"`
-		Description     string `json:"description"`
-		DurationMinutes uint   `json:"duration_minutes"`
-		ExerciseType    string `json:"exercise_type"`
+		Title        string `json:"title"`
+		Description  string `json:"description"`
+		MediaLink    string `json:"media_link"`
+		ExerciseType string `json:"exercise_type"`
 	}
 
 	err := app.readJson(w, r, &input)
@@ -48,10 +48,10 @@ func (app *application) createExerciseHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	exercise := &data.Exercise{
-		Title:           input.Title,
-		Description:     input.Description,
-		DurationMinutes: input.DurationMinutes,
-		ExerciseType:    input.ExerciseType,
+		Title:        input.Title,
+		Description:  input.Description,
+		MediaLink:    input.MediaLink,
+		ExerciseType: input.ExerciseType,
 	}
 
 	err = app.models.Exercise.Insert(exercise)
@@ -76,10 +76,10 @@ func (app *application) updateExerciseHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	var input struct {
-		Title           *string `json:"title"`
-		Description     *string `json:"description"`
-		DurationMinutes *uint   `json:"duration_minutes"`
-		ExerciseType    *string `json:"exercise_type"`
+		Title        *string `json:"title"`
+		Description  *string `json:"description"`
+		MediaLink    *string `json:"media_link"`
+		ExerciseType *string `json:"exercise_type"`
 	}
 
 	err = app.readJson(w, r, &input)
@@ -107,8 +107,8 @@ func (app *application) updateExerciseHandler(w http.ResponseWriter, r *http.Req
 		exercise.Description = *input.Description
 	}
 
-	if input.DurationMinutes != nil {
-		exercise.DurationMinutes = *input.DurationMinutes
+	if input.MediaLink != nil {
+		exercise.MediaLink = *input.MediaLink
 	}
 
 	if input.ExerciseType != nil {

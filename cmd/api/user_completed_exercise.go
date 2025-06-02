@@ -14,7 +14,7 @@ func (app *application) createUserCompletedExerciseHandler(w http.ResponseWriter
 	var input struct {
 		UserId     uuid.UUID `json:"user_id"`
 		WeekNumber int       `json:"week_number"`
-		DayNumber  int       `json:"day_number"`
+		Duration   int8      `json:"duration"`
 		ExerciseId int       `json:"exercise_id"`
 		Notes      string    `json:"notes"`
 	}
@@ -33,10 +33,8 @@ func (app *application) createUserCompletedExerciseHandler(w http.ResponseWriter
 
 	completedExercise := &data.UserCompletedExercise{
 		UserId:     userUUID,
-		WeekNumber: input.WeekNumber,
-		DayNumber:  input.DayNumber,
+		Duration:   input.Duration,
 		ExerciseId: input.ExerciseId,
-		Notes:      input.Notes,
 	}
 
 	err = app.models.UserCompletedExercise.Insert(completedExercise)

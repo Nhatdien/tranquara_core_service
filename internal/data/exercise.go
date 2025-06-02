@@ -9,11 +9,11 @@ import (
 )
 
 type Exercise struct {
-	ExerciseID      int64  `json:"exercise_id"`
-	Title           string `json:"title"`
-	Description     string `json:"description"`
-	DurationMinutes uint   `json:"duration_minutes"`
-	ExerciseType    string `json:"exercise_type"`
+	ExerciseID   int64  `json:"exercise_id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	MediaLink    string `json:"media_link"`
+	ExerciseType string `json:"exercise_type"`
 }
 
 type ExerciseModel struct {
@@ -22,7 +22,7 @@ type ExerciseModel struct {
 
 func (e ExerciseModel) Insert(exercise *Exercise) error {
 	query := `
-		INSERT INTO exercises (title, description, duration_minutes, exercise_type)
+		INSERT INTO exercises (title, description, media_link, exercise_type)
 		VALUES ($1, $2, $3, $4)
 		RETURNING *
 	`
@@ -31,15 +31,15 @@ func (e ExerciseModel) Insert(exercise *Exercise) error {
 
 	defer cancel()
 
-	args := []any{exercise.Title, exercise.Description, exercise.DurationMinutes, exercise.ExerciseType}
-	argsResponse := []any{&exercise.ExerciseID, &exercise.Title, &exercise.Description, &exercise.DurationMinutes, &exercise.ExerciseType}
+	args := []any{exercise.Title, exercise.Description, exercise.MediaLink, exercise.ExerciseType}
+	argsResponse := []any{&exercise.ExerciseID, &exercise.Title, &exercise.Description, &exercise.MediaLink, &exercise.ExerciseType}
 
 	return e.DB.QueryRowContext(ctx, query, args...).Scan(argsResponse...)
 }
 
 func (e ExerciseModel) Get(id int64) (*Exercise, error) {
 	query := `
-				SELECT  exercise_id, title, description, duration_minutes, exercise_type  FROM exercises 
+				SELECT  exercise_id, title, description, media_link, exercise_type  FROM exercises 
 				WHERE exercise_id = $1
 			`
 
@@ -53,7 +53,7 @@ func (e ExerciseModel) Get(id int64) (*Exercise, error) {
 		&exercise.ExerciseID,
 		&exercise.Title,
 		&exercise.Description,
-		&exercise.DurationMinutes,
+		&exercise.MediaLink,
 		&exercise.ExerciseType,
 	)
 
@@ -71,7 +71,7 @@ func (e ExerciseModel) Get(id int64) (*Exercise, error) {
 
 func (e ExerciseModel) GetList(title string, exerciseType string, filter Filter) ([]*Exercise, Metadata, error) {
 	query := fmt.Sprintf(`
-				SELECT COUNT(*) OVER(),  exercise_id, title, description, duration_minutes, exercise_type  FROM exercises 
+				SELECT COUNT(*) OVER(),  exercise_id, title, description, media_link, exercise_type  FROM exercises 
 				WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 				AND (LOWER(exercise_type) = LOWER($2) OR $2 = '')
 				ORDER BY %s %s
@@ -97,7 +97,7 @@ func (e ExerciseModel) GetList(title string, exerciseType string, filter Filter)
 			&exercise.ExerciseID,
 			&exercise.Title,
 			&exercise.Description,
-			&exercise.DurationMinutes,
+			&exercise.MediaLink,
 			&exercise.ExerciseType,
 		)
 
@@ -125,8 +125,8 @@ func (e ExerciseModel) Update(exercise *Exercise) error {
 			RETURNING *
 	`
 
-	args := []any{exercise.Title, exercise.Description, exercise.DurationMinutes, exercise.ExerciseType, exercise.ExerciseID}
-	argsResponse := []any{&exercise.ExerciseID, &exercise.Title, &exercise.Description, &exercise.DurationMinutes, &exercise.ExerciseType}
+	args := []any{exercise.Title, exercise.Description, exercise.MediaLink, exercise.ExerciseType, exercise.ExerciseID}
+	argsResponse := []any{&exercise.ExerciseID, &exercise.Title, &exercise.Description, &exercise.MediaLink, &exercise.ExerciseType}
 
 	return e.DB.QueryRow(query, args...).Scan(argsResponse...)
 }
