@@ -9,12 +9,11 @@ import (
 	"tranquara.net/internal"
 )
 
-// type UserGuidenceRequest struct {
-// 	current_week        string
-// 	chatbot_interaction string
-// 	emotion_tracking    string
-// }
-
+//	type UserGuidenceRequest struct {
+//		current_week        string
+//		chatbot_interaction string
+//		emotion_tracking    string
+//	}
 func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Request) {
 	// Publish the message to the RabbitMQ
 

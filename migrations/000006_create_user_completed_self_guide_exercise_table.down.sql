@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS "user_self_guided_activities"
