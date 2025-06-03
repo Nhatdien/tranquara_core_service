@@ -1,4 +1,4 @@
-package internal
+package pubsub
 
 import (
 	"context"
@@ -41,4 +41,24 @@ func Cosumer(ch *amqp.Channel, queue_name string, callback func(message amqp.Del
 			callback(message)
 		}
 	}()
+}
+
+func setupUnits(amqpChannel *amqp.Channel) {
+	defineQueues(amqpChannel)
+}
+
+func defineQueues(amqpChannel *amqp.Channel) error {
+	_, err := amqpChannel.QueueDeclare("ai_tasks", false, false, false, false, nil)
+
+	if err != nil {
+		return err
+	}
+	_, err = amqpChannel.QueueDeclare("ai_response", false, false, false, false, nil)
+
+	return err
+}
+
+func defineConsumers(amqpChannel *amqp.Channel) error {
+
+	return nil
 }

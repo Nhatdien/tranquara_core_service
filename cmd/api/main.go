@@ -14,6 +14,7 @@ import (
 	"tranquara.net/internal/data"
 	"tranquara.net/internal/jsonlog"
 	"tranquara.net/internal/mailer"
+	"tranquara.net/internal/pubsub"
 )
 
 type envolope map[string]any
@@ -88,18 +89,11 @@ func main() {
 
 	logger.PrintInfo("connect to db successfully", nil)
 
-	conUrl := "amqp://guest:guest@rabbitmq:5672/"
-	conn, err := amqp.Dial(conUrl)
-	if err != nil {
-		panic(err)
-	}
+	channel, err := pubsub.Serve()
 
-	defer conn.Close()
-	channel, err := conn.Channel()
 	if err != nil {
-		panic(err)
+		logger.PrintInfo("Cannot open the channel", nil)
 	}
-	defer channel.Close()
 
 	app := &application{
 		config:        cfg,
@@ -107,16 +101,6 @@ func main() {
 		rabbitchannel: channel,
 		models:        data.NewModels(db),
 		mailer:        mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
-	}
-
-	_, err = channel.QueueDeclare("ai_tasks", false, false, false, false, nil)
-
-	if err != nil {
-		log.Println(err)
-	}
-	_, err = channel.QueueDeclare("ai_response", false, false, false, false, nil)
-	if err != nil {
-		log.Println(err)
 	}
 
 	log.Println("Successfully connected to RabbitMQ")

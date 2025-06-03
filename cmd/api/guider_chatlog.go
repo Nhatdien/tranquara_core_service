@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"tranquara.net/internal"
 	"tranquara.net/internal/data"
+	"tranquara.net/internal/pubsub"
 	"tranquara.net/internal/validator"
 )
 
@@ -35,7 +35,7 @@ func (app *application) ProvideGuidenceHandler(w http.ResponseWriter, r *http.Re
 		app.badRequestResponse(w, r, err)
 		return
 	}
-	err = internal.PublishJson(app.rabbitchannel, "", "ai_tasks", input)
+	err = pubsub.PublishJson(app.rabbitchannel, "", "ai_tasks", input)
 	if err != nil {
 		app.errorResponse(w, r, http.StatusInternalServerError, "Failed to publish message")
 		return
