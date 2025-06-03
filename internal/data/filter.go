@@ -3,6 +3,7 @@ package data
 import (
 	"math"
 	"strings"
+	"time"
 
 	"tranquara.net/internal/validator"
 )
@@ -10,6 +11,13 @@ import (
 type Filter struct {
 	Page         int
 	PageSize     int
+	Sort         string
+	SortSafelist []string
+}
+
+type TimeFilter struct {
+	StartTime    time.Time
+	EndTime      time.Time
 	Sort         string
 	SortSafelist []string
 }
@@ -22,7 +30,7 @@ type Metadata struct {
 	TotalRecords int `json:"total_records,omitempty"`
 }
 
-func calculateMetadata(totalRecords, page, pageSize int) Metadata {
+func (f Filter) calculateMetadata(totalRecords, page, pageSize int) Metadata {
 	if totalRecords == 0 {
 		return Metadata{}
 	}

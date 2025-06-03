@@ -50,7 +50,7 @@ func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, filter Filter) ([]
 		return nil, Metadata{}, err
 	}
 
-	metadata := calculateMetadata(totalRecords, filter.Page, filter.PageSize)
+	metadata := filter.calculateMetadata(totalRecords, filter.Page, filter.PageSize)
 	return guiderChatlogs, metadata, err
 }
 
