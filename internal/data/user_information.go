@@ -70,8 +70,8 @@ func (m UserInformationModel) Get(userID uuid.UUID) (*UserInformation, error) {
 
 func (m UserInformationModel) Insert(info *UserInformation) error {
 	query := `
-		INSERT INTO user_information (user_id, name, age, gender, kyc_answers, settings, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO user_information (user_id, name, age, gender, kyc_answers, settings)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING *
 	`
 

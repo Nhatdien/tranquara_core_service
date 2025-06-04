@@ -23,7 +23,7 @@ type UserJournalModel struct {
 	DB *sql.DB
 }
 
-func (journal UserJournalModel) Get(id int64) (*UserJournal, error) {
+func (journal UserJournalModel) Get(id uuid.UUID, userID uuid.UUID) (*UserJournal, error) {
 	query := `
 				SELECT * FROM user_journals 
 				WHERE id = $1 AND user_id = $2  
@@ -155,7 +155,7 @@ func (journal UserJournalModel) Update(userJournal *UserJournal) (*UserJournal, 
 	return userJournal, nil
 }
 
-func (journal UserJournalModel) Delete(id int64) error {
+func (journal UserJournalModel) Delete(id uuid.UUID) error {
 	query := `
 			DELETE FROM user_journals
 			WHERE id = $1

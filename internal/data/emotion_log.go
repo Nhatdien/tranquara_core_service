@@ -69,9 +69,10 @@ func (emo EmotionLogModel) GetList(userId uuid.UUID, filter TimeFilter) ([]*Emot
 
 func (emo EmotionLogModel) Insert(emotionLog *EmotionLog) (*EmotionLog, error) {
 	query := `
-			INSERT INTO emotion_logs (title, description, media_link, exercise_type)
-			VALUES ($1, $2, $3, $4)
-		`
+		INSERT INTO emotion_logs (user_id, emotion, source, context)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, emotion, source, context, created_at
+`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
