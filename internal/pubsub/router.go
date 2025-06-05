@@ -4,21 +4,19 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func Serve() (*amqp.Channel, error) {
+func Serve() (*amqp.Channel, *amqp.Connection, error) {
 	conUrl := "amqp://guest:guest@rabbitmq:5672/"
 	conn, err := amqp.Dial(conUrl)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
-	defer conn.Close()
 	channel, err := conn.Channel()
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
-	defer channel.Close()
 
-	setupUnits(channel)
+	err = setupUnits(channel)
 
-	return channel, nil
+	return channel, conn, err
 }

@@ -3,7 +3,6 @@ package pubsub
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -20,7 +19,7 @@ func PublishJson[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	})
 }
 
-func Cosumer(ch *amqp.Channel, queue_name string, callback func(message amqp.Delivery)) {
+func Consumer(ch *amqp.Channel, queue_name string, callback func(message amqp.Delivery)) error {
 	messages, err := ch.Consume(
 		queue_name, // queue name
 		"",         // consumer
@@ -31,34 +30,47 @@ func Cosumer(ch *amqp.Channel, queue_name string, callback func(message amqp.Del
 		nil,        // arguments
 	)
 	if err != nil {
-		log.Println(err)
+		panic(err)
 	}
 
 	go func() {
 		for message := range messages {
 			// For example, show received message in a console.
-			log.Printf(" > Received message: %s\n", message.Body)
 			callback(message)
 		}
 	}()
-}
-
-func setupUnits(amqpChannel *amqp.Channel) {
-	defineQueues(amqpChannel)
-}
-
-func defineQueues(amqpChannel *amqp.Channel) error {
-	_, err := amqpChannel.QueueDeclare("ai_tasks", false, false, false, false, nil)
-
-	if err != nil {
-		return err
-	}
-	_, err = amqpChannel.QueueDeclare("ai_response", false, false, false, false, nil)
 
 	return err
 }
 
-func defineConsumers(amqpChannel *amqp.Channel) error {
+func setupUnits(amqpChannel *amqp.Channel) error {
+	err := defineQueues(amqpChannel)
 
-	return nil
+	if err != nil {
+		return err
+	}
+	err = defineConsumers(amqpChannel)
+
+	return err
+}
+
+func defineQueues(amqpChannel *amqp.Channel) error {
+	_, err := amqpChannel.QueueDeclare("ai_tasks", false, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = amqpChannel.QueueDeclare("sync_data", false, false, false, false, nil)
+	return err
+}
+
+func defineConsumers(amqpChannel *amqp.Channel) error {
+	err := Consumer(amqpChannel, "sync_data", syncDataMessageCallback)
+
+	if err != nil {
+		return err
+	}
+	err = Consumer(amqpChannel, "ai_tasks", aiTaskResponseMessageCallback)
+
+	return err
 }

@@ -89,7 +89,10 @@ func main() {
 
 	logger.PrintInfo("connect to db successfully", nil)
 
-	channel, err := pubsub.Serve()
+	channel, conn, err := pubsub.Serve()
+
+	defer channel.Close()
+	defer conn.Close()
 
 	if err != nil {
 		logger.PrintInfo("Cannot open the channel", nil)
