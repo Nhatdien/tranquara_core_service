@@ -51,8 +51,5 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/user_streaks", app.authMiddleWare(app.createUserStreakHandler))
 	router.HandlerFunc(http.MethodPut, "/v1/user_streaks", app.authMiddleWare(app.updateUserStreakHandler))
 
-	//AI guidence handler
-	router.HandlerFunc(http.MethodPost, "/v1/provide_guidence", app.ProvideGuidenceHandler)
-
 	return app.recoverPanic(app.rateLimit(app.testPostMiddleWare(router)))
 }

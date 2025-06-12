@@ -10,6 +10,7 @@ func (app *application) logError(r *http.Request, err error) {
 		"request_method": r.Method,
 		"request_url":    r.RequestURI,
 	})
+
 }
 
 func (app *application) errorResponse(w http.ResponseWriter, r *http.Request, status int, message interface{}) {
