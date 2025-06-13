@@ -89,20 +89,22 @@ func main() {
 
 	logger.PrintInfo("connect to db successfully", nil)
 
-	channel, conn, err := pubsub.Serve()
-
-	defer channel.Close()
-	defer conn.Close()
-
 	if err != nil {
 		logger.PrintInfo("Cannot open the channel", nil)
 	}
+
+	models := data.NewModels(db)
+
+	channel, conn, err := pubsub.Serve(&models)
+
+	defer channel.Close()
+	defer conn.Close()
 
 	app := &application{
 		config:        cfg,
 		logger:        logger,
 		rabbitchannel: channel,
-		models:        data.NewModels(db),
+		models:        models,
 		mailer:        mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 

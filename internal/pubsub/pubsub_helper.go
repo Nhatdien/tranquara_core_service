@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"tranquara.net/internal/data"
 )
 
 func PublishJson[T any](ch *amqp.Channel, exchange, key string, val T) error {
@@ -19,7 +20,7 @@ func PublishJson[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	})
 }
 
-func Consumer(ch *amqp.Channel, queue_name string, callback func(message amqp.Delivery)) error {
+func Consumer(ch *amqp.Channel, queue_name string, models *data.Models, callback func(message amqp.Delivery, models *data.Models)) error {
 	messages, err := ch.Consume(
 		queue_name, // queue name
 		"",         // consumer
@@ -36,20 +37,20 @@ func Consumer(ch *amqp.Channel, queue_name string, callback func(message amqp.De
 	go func() {
 		for message := range messages {
 			// For example, show received message in a console.
-			callback(message)
+			callback(message, models)
 		}
 	}()
 
 	return err
 }
 
-func setupUnits(amqpChannel *amqp.Channel) error {
+func setupUnits(amqpChannel *amqp.Channel, models *data.Models) error {
 	err := defineQueues(amqpChannel)
 
 	if err != nil {
 		return err
 	}
-	err = defineConsumers(amqpChannel)
+	err = defineConsumers(amqpChannel, models)
 
 	return err
 }
@@ -64,13 +65,13 @@ func defineQueues(amqpChannel *amqp.Channel) error {
 	return err
 }
 
-func defineConsumers(amqpChannel *amqp.Channel) error {
-	err := Consumer(amqpChannel, "sync_data", syncDataMessageCallback)
+func defineConsumers(amqpChannel *amqp.Channel, models *data.Models) error {
+	err := Consumer(amqpChannel, "sync_data", models, syncDataMessageCallback)
 
 	if err != nil {
 		return err
 	}
-	err = Consumer(amqpChannel, "ai_tasks", aiTaskResponseMessageCallback)
+	err = Consumer(amqpChannel, "ai_tasks", models, aiTaskResponseMessageCallback)
 
 	return err
 }
