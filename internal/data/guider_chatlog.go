@@ -54,17 +54,17 @@ func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, filter Filter) ([]
 	return guiderChatlogs, metadata, err
 }
 
-func (chatlog GuiderChatlogModel) Insert(userUUID uuid.UUID) (GuiderChatlog, error) {
+func (chatlog GuiderChatlogModel) Insert(chatLog *GuiderChatlog) (*GuiderChatlog, error) {
 	query := `INSERT INTO ai_guider_chatlog  (user_id, sender_type, message)
-			  VALUES ($1, $2, $3)`
+			  VALUES ($1, $2, $3)
+			  RETURNING id, user_id, sender_type, message, created_at`
 
-	var guiderChatlog GuiderChatlog
-	argsResponse := []any{&guiderChatlog.UserId, &guiderChatlog.SenderType, &guiderChatlog.Message}
+	argsResponse := []any{&chatLog.Id, &chatLog.UserId, &chatLog.SenderType, &chatLog.Message, &chatLog.CreatedAt}
 
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := chatlog.DB.QueryRowContext(context, query, userUUID).Scan(argsResponse...)
+	err := chatlog.DB.QueryRowContext(context, query, chatLog.UserId, chatLog.SenderType, chatLog.Message).Scan(argsResponse...)
 
-	return guiderChatlog, err
+	return chatLog, err
 }

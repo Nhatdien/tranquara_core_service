@@ -89,14 +89,13 @@ func main() {
 
 	logger.PrintInfo("connect to db successfully", nil)
 
-	if err != nil {
-		logger.PrintInfo("Cannot open the channel", nil)
-	}
-
 	models := data.NewModels(db)
 
 	channel, conn, err := pubsub.Serve(&models)
 
+	if err != nil {
+		logger.PrintError(err, nil)
+	}
 	defer channel.Close()
 	defer conn.Close()
 
