@@ -10,7 +10,7 @@ COPY . .
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN go build -ldflags="-s -w" -o main ./cmd/api
 
-FROM alpine:latest 
+FROM scratch
 
 COPY --from=builder ["/build/main", "/"]
 COPY --from=builder ["/build/publicKey.pem", "/"]

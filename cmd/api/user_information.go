@@ -15,7 +15,6 @@ func (app *application) getUserInformationHandler(w http.ResponseWriter, r *http
 	}
 
 	info, err := app.models.UserInformation.Get(id)
-	info.UserID = id
 	if err != nil {
 		if err == data.ErrRecordNotFound {
 			app.notFoundRespond(w, r)
@@ -24,6 +23,7 @@ func (app *application) getUserInformationHandler(w http.ResponseWriter, r *http
 		}
 		return
 	}
+	info.UserID = id
 
 	err = app.writeJson(w, http.StatusOK, envolope{"user_info": info}, nil)
 	if err != nil {
@@ -48,6 +48,12 @@ func (app *application) createUserInformationHandler(w http.ResponseWriter, r *h
 
 	input.UserID = id
 	err = app.models.UserInformation.Insert(&input)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.models.UserStreak.Insert(input.UserID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return

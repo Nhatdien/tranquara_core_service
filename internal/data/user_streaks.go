@@ -34,19 +34,16 @@ func (streak UserStreakModel) Get(userUuid uuid.UUID) (UserStreak, error) {
 	return userStreak, err
 }
 
-func (streak UserStreakModel) Insert(userUUID uuid.UUID) (UserStreak, error) {
+func (streak UserStreakModel) Insert(userUUID uuid.UUID) error {
 	query := `INSERT INTO user_streaks (user_id)
 			  VALUES ($1)`
-
-	var userStreak UserStreak
-	argsResponse := []any{&userStreak.UserId, &userStreak.CurrentStreak, &userStreak.LongestStreak, &userStreak.LastActive}
 
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := streak.DB.QueryRowContext(context, query, userUUID).Scan(argsResponse...)
+	_, err := streak.DB.QueryContext(context, query, userUUID)
 
-	return userStreak, err
+	return err
 }
 
 func (streak UserStreakModel) UpdateOrReset(userUuid uuid.UUID) error {

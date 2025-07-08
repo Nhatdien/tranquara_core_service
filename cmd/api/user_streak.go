@@ -31,25 +31,6 @@ func (app *application) getUserStreakHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (app *application) createUserStreakHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := app.GetUserUUIDFromContext(r.Context())
-	if err != nil {
-		app.badRequestResponse(w, r, err)
-		return
-	}
-
-	insertedStreak, err := app.models.UserStreak.Insert(id)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-
-	err = app.writeJson(w, http.StatusCreated, envolope{"user_streak": insertedStreak}, nil)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-	}
-}
-
 func (app *application) updateUserStreakHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.GetUserUUIDFromContext(r.Context())
 	if err != nil {

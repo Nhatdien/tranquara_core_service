@@ -72,7 +72,7 @@ func (m UserInformationModel) Insert(info *UserInformation) error {
 	query := `
 		INSERT INTO user_information (user_id, name, age, gender, kyc_answers, settings)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING *
+		RETURNING user_id, name, age, gender, kyc_answers, settings, created_at
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -88,23 +88,37 @@ func (m UserInformationModel) Insert(info *UserInformation) error {
 		return err
 	}
 
-	return m.DB.QueryRowContext(ctx, query,
+	var kycAnswersByte, settingBytes []byte
+	err = m.DB.QueryRowContext(ctx, query,
 		info.UserID,
 		info.Name,
 		info.Age,
 		info.Gender,
 		kycJSON,
 		settingJSON,
-		info.CreatedAt,
 	).Scan(
 		&info.UserID,
 		&info.Name,
 		&info.Age,
 		&info.Gender,
-		&info.KYCAnswers,
-		&info.Settings,
+		&kycAnswersByte,
+		&settingBytes,
 		&info.CreatedAt,
 	)
+	if err == sql.ErrNoRows {
+		return nil // or return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	// Unmarshal raw JSON bytes back into maps
+	if err := json.Unmarshal(kycAnswersByte, &info.KYCAnswers); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(settingBytes, &info.Settings); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m UserInformationModel) Update(info *UserInformation) error {

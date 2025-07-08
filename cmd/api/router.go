@@ -48,7 +48,6 @@ func (app *application) routes() http.Handler {
 
 	// UserStreak routes
 	router.HandlerFunc(http.MethodGet, "/v1/user_streaks", app.authMiddleWare(app.getUserStreakHandler))
-	router.HandlerFunc(http.MethodPost, "/v1/user_streaks", app.authMiddleWare(app.createUserStreakHandler))
 	router.HandlerFunc(http.MethodPut, "/v1/user_streaks", app.authMiddleWare(app.updateUserStreakHandler))
 
 	return app.recoverPanic(app.rateLimit(app.testPostMiddleWare(router)))
