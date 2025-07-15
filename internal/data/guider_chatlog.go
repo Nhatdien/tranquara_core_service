@@ -23,13 +23,10 @@ type GuiderChatlogModel struct {
 func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, filter Filter) ([]*GuiderChatlog, Metadata, error) {
 	query := `SELECT COUNT(*) OVER(), id, user_id, sender_type, message, created_at FROM ai_guider_chatlog 
 			  WHERE user_id = $1
-			  ORDER_BY created_at ASC
+			  ORDER BY created_at ASC
 			  LIMIT $2 OFFSET $3`
 
-	var guiderChatlog GuiderChatlog
-
 	totalRecords := 0
-	argsResponse := []any{&totalRecords, &guiderChatlog.Id, &guiderChatlog.UserId, &guiderChatlog.SenderType, &guiderChatlog.Message, &guiderChatlog.CreatedAt}
 
 	context, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -37,17 +34,31 @@ func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, filter Filter) ([]
 	var guiderChatlogs []*GuiderChatlog
 
 	rows, err := chatlog.DB.QueryContext(context, query, userUuid, filter.limit(), filter.offset())
-	for rows.Next() {
-		var guiderChatlog *GuiderChatlog
-		rows.Scan(
-			argsResponse...,
-		)
-
-		guiderChatlogs = append(guiderChatlogs, guiderChatlog)
-	}
 
 	if err != nil {
-		return nil, Metadata{}, err
+		return guiderChatlogs, Metadata{}, err
+	}
+
+	if rows == nil {
+		return guiderChatlogs, Metadata{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var g GuiderChatlog
+		err := rows.Scan(
+			&totalRecords,
+			&g.Id,
+			&g.UserId,
+			&g.SenderType,
+			&g.Message,
+			&g.CreatedAt,
+		)
+		if err != nil {
+			return guiderChatlogs, Metadata{}, err
+		}
+		// Make a copy for the slice
+		guiderChatlogs = append(guiderChatlogs, &g)
 	}
 
 	metadata := filter.calculateMetadata(totalRecords, filter.Page, filter.PageSize)

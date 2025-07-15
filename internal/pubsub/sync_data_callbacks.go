@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -10,12 +11,29 @@ import (
 	"tranquara.net/internal/jsonlog"
 )
 
+type CustomTime struct {
+	time.Time
+}
+
+const customLayout = "2006-01-02T15:04:05.000000"
+
+func (ct *CustomTime) UnmarshalJSON(b []byte) error {
+	s := string(b)
+	s = s[1 : len(s)-1] // remove the quotes
+	t, err := time.Parse(customLayout, s)
+	if err != nil {
+		return err
+	}
+	ct.Time = t
+	return nil
+}
+
 func syncDataMessageCallback(message amqp.Delivery, models *data.Models) {
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 	var input struct {
-		event     string
-		payload   any
-		timestamp time.Time
+		Event     string     `json:"event"`
+		Timestamp CustomTime `json:"timestamp"`
+		Payload   any        `json:"payload"`
 	}
 
 	err := json.Unmarshal(message.Body, &input)
@@ -24,9 +42,14 @@ func syncDataMessageCallback(message amqp.Delivery, models *data.Models) {
 		return
 	}
 
-	if input.event == "user_journal.create" {
+	logger.PrintInfo("received message", map[string]string{
+		"message": string(message.Body),
+	})
+
+	fmt.Print(input)
+	if input.Event == "user_journal.create" {
 		// Step 1: Marshal payload back to JSON
-		payloadBytes, err := json.Marshal(input.payload)
+		payloadBytes, err := json.Marshal(input.Payload)
 		if err != nil {
 			logger.PrintError(err, nil)
 			return
@@ -47,9 +70,9 @@ func syncDataMessageCallback(message amqp.Delivery, models *data.Models) {
 		}
 	}
 
-	if input.event == "emotion_log.create" {
+	if input.Event == "emotion_log.create" {
 		// Step 1: Marshal payload back to JSON
-		payloadBytes, err := json.Marshal(input.payload)
+		payloadBytes, err := json.Marshal(input.Payload)
 		if err != nil {
 			logger.PrintError(err, nil)
 			return
@@ -70,9 +93,9 @@ func syncDataMessageCallback(message amqp.Delivery, models *data.Models) {
 		}
 	}
 
-	if input.event == "chat_log.create" {
+	if input.Event == "chatlog.create" {
 		// Step 1: Marshal payload back to JSON
-		payloadBytes, err := json.Marshal(input.payload)
+		payloadBytes, err := json.Marshal(input.Payload)
 		if err != nil {
 			logger.PrintError(err, nil)
 			return
