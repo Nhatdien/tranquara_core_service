@@ -40,11 +40,18 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPut, "/v1/user_information", app.authMiddleWare(app.updateUserInformationHandler))
 
 	//user-journals routes
-	router.HandlerFunc(http.MethodGet, "/v1/user-journal", app.authMiddleWare(app.GetUserJournals))
-	router.HandlerFunc(http.MethodPost, "/v1/user-journal", app.authMiddleWare(app.CreateUserJournal))
-	router.HandlerFunc(http.MethodGet, "/v1/user-journal/:id", app.authMiddleWare(app.GetUserJournal))
-	router.HandlerFunc(http.MethodPut, "/v1/user-journal/:id", app.authMiddleWare(app.UpdateUserJournal))
-	router.HandlerFunc(http.MethodDelete, "/v1/user-journal/:id", app.authMiddleWare(app.DeleteUserJournal))
+	router.HandlerFunc(http.MethodGet, "/v1/user-journal", app.authMiddleWare(app.GetUserTemplates))
+	router.HandlerFunc(http.MethodPost, "/v1/user-journal", app.authMiddleWare(app.CreateUserTemplate))
+	router.HandlerFunc(http.MethodGet, "/v1/user-journal/:id", app.authMiddleWare(app.GetUserTemplate))
+	router.HandlerFunc(http.MethodPut, "/v1/user-journal/:id", app.authMiddleWare(app.UpdateUserTemplate))
+	router.HandlerFunc(http.MethodDelete, "/v1/user-journal/:id", app.authMiddleWare(app.DeleteUserTemplate))
+
+	//UserTemplate
+	router.HandlerFunc(http.MethodGet, "/v1/user-template", app.authMiddleWare(app.GetUserJournals))
+	router.HandlerFunc(http.MethodPost, "/v1/user-template", app.authMiddleWare(app.CreateUserJournal))
+	router.HandlerFunc(http.MethodGet, "/v1/user-template/:id", app.authMiddleWare(app.GetUserJournal))
+	router.HandlerFunc(http.MethodPut, "/v1/user-template/:id", app.authMiddleWare(app.UpdateUserJournal))
+	router.HandlerFunc(http.MethodDelete, "/v1/user-template/:id", app.authMiddleWare(app.DeleteUserJournal))
 
 	// UserStreak routes
 	router.HandlerFunc(http.MethodGet, "/v1/user_streaks", app.authMiddleWare(app.getUserStreakHandler))

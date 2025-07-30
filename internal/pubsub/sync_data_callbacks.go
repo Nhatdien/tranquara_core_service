@@ -2,7 +2,6 @@ package pubsub
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 
@@ -46,7 +45,6 @@ func syncDataMessageCallback(message amqp.Delivery, models *data.Models) {
 		"message": string(message.Body),
 	})
 
-	fmt.Print(input)
 	if input.Event == "user_journal.create" {
 		// Step 1: Marshal payload back to JSON
 		payloadBytes, err := json.Marshal(input.Payload)

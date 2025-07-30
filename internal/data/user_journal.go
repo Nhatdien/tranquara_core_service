@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,11 +56,11 @@ func (journal UserJournalModel) Get(id uuid.UUID, userID uuid.UUID) (*UserJourna
 }
 
 func (journal UserJournalModel) GetList(userId uuid.UUID, filter TimeFilter) ([]*UserJournal, TimeFilter, error) {
-	query := fmt.Sprintf(`
-				SELECT COUNT(*) OVER(), id, title, content, template_id, created_at  FROM exercises 
+	query := `
+				SELECT COUNT(*) OVER(), id, title, content, template_id, created_at FROM user_journals 
 				WHERE user_id = $1 AND create_at BETWEEN $2 AND $3 
 				ORDER BY created_at ASC
-			`)
+			`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 

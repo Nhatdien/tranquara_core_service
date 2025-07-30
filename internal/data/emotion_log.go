@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,12 +22,12 @@ type EmotionLogModel struct {
 }
 
 func (emo EmotionLogModel) GetList(userId uuid.UUID, filter TimeFilter) ([]*EmotionLog, TimeFilter, error) {
-	query := fmt.Sprintf(`
+	query := `
 				SELECT COUNT(*) OVER(), id, emotion, source, context, created_at FROM emotion_logs 
 				WHERE user_id = $1
 				AND created_at BETWEEN $2 and $3
 				ORDER BY created_at
-			`)
+			`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
