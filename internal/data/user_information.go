@@ -13,7 +13,7 @@ import (
 type UserInformation struct {
 	UserID     uuid.UUID      `json:"user_id"`
 	Name       string         `json:"name"`
-	Age        int16          `json:"age"`
+	AgeRange   string         `json:"age_range"`
 	Gender     string         `json:"gender"`
 	KYCAnswers map[string]any `json:"kyc_answers"` // handles JSONB
 	Settings   map[string]any `json:"settings"`
@@ -26,7 +26,7 @@ type UserInformationModel struct {
 
 func (m UserInformationModel) Get(userID uuid.UUID) (*UserInformation, error) {
 	query := `
-		SELECT user_id, name, age, gender, kyc_answers, settings, created_at
+		SELECT user_id, name, age_range, gender, kyc_answers, settings, created_at
 		FROM user_information
 		WHERE user_id = $1
 	`
@@ -41,7 +41,7 @@ func (m UserInformationModel) Get(userID uuid.UUID) (*UserInformation, error) {
 	err := m.DB.QueryRowContext(ctx, query, userID).Scan(
 		&info.UserID,
 		&info.Name,
-		&info.Age,
+		&info.AgeRange,
 		&info.Gender,
 		&kycRaw,
 		&settingRaw,
@@ -70,9 +70,9 @@ func (m UserInformationModel) Get(userID uuid.UUID) (*UserInformation, error) {
 
 func (m UserInformationModel) Insert(info *UserInformation) error {
 	query := `
-		INSERT INTO user_information (user_id, name, age, gender, kyc_answers, settings)
+		INSERT INTO user_information (user_id, name, age_range, gender, kyc_answers, settings)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING user_id, name, age, gender, kyc_answers, settings, created_at
+		RETURNING user_id, name, age_range, gender, kyc_answers, settings, created_at
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -92,14 +92,14 @@ func (m UserInformationModel) Insert(info *UserInformation) error {
 	err = m.DB.QueryRowContext(ctx, query,
 		info.UserID,
 		info.Name,
-		info.Age,
+		info.AgeRange,
 		info.Gender,
 		kycJSON,
 		settingJSON,
 	).Scan(
 		&info.UserID,
 		&info.Name,
-		&info.Age,
+		&info.AgeRange,
 		&info.Gender,
 		&kycAnswersByte,
 		&settingBytes,
@@ -126,7 +126,7 @@ func (m UserInformationModel) Update(info *UserInformation) error {
 		UPDATE user_information
 		SET 
 			name = $1
-			age = $2,
+			age_range = $2,
 			gender = $3,
 			kyc_answers = $4,
 			settings = $5
@@ -149,7 +149,7 @@ func (m UserInformationModel) Update(info *UserInformation) error {
 
 	return m.DB.QueryRowContext(ctx, query,
 		info.Name,
-		info.Age,
+		info.AgeRange,
 		info.Gender,
 		kycJSON,
 		settingJSON,
@@ -157,7 +157,7 @@ func (m UserInformationModel) Update(info *UserInformation) error {
 	).Scan(
 		&info.UserID,
 		&info.Name,
-		&info.Age,
+		&info.AgeRange,
 		&info.Gender,
 		&info.KYCAnswers,
 		&info.Settings,
