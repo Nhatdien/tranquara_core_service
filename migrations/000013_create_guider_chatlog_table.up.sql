@@ -1,5 +1,6 @@
 CREATE TABLE ai_guider_chatlog (
     id UUID DEFAULT gen_random_uuid(),
+    journal_id UUID REFERENCES user_journals(id),
     user_id UUID,  
     sender_type VARCHAR(50),
     message TEXT,

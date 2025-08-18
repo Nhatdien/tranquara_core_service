@@ -88,6 +88,21 @@ func (app *application) GetUserJournals(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+func (app *application) GetAllTemplates(w http.ResponseWriter, r *http.Request) {
+	templates, err := app.models.UserJournal.GetAllTemplates()
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJson(w, http.StatusOK, envolope{
+		"templates": templates,
+	}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
 func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request) {
 	var input data.UserJournal
 
@@ -103,7 +118,7 @@ func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if input.Title == "" || input.Content == "" || input.TemplateID == uuid.Nil {
+	if input.Title == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
@@ -131,7 +146,7 @@ func (app *application) UpdateUserJournal(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if input.ID == uuid.Nil || input.Title == "" || input.Content == "" || input.TemplateID == uuid.Nil {
+	if input.ID == uuid.Nil || input.Title == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}

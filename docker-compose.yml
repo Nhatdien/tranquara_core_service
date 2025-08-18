@@ -53,7 +53,7 @@ services:
       image: migrate/migrate
       volumes:
           - ./migrations:/migrations
-      command: ["-path", "/migrations", "-database",  "postgres://postgres:Nhatdien123@db:5432/tranquara_core?sslmode=disable", "up"]
+      command: ["-path", "/migrations", "-database",  "postgres://postgres:Nhatdien123@db:5432/tranquara_core?sslmode=disable", "down", "--all"]
       links: 
           - db
       networks:

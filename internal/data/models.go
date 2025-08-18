@@ -18,7 +18,6 @@ type Models struct {
 	UserStreak            UserStreakModel
 	EmotionLog            EmotionLogModel
 	UserJournal           UserJournalModel
-	UserTemplate          UserTemplateModel
 }
 
 func NewModels(db *sql.DB) Models {
@@ -31,7 +30,6 @@ func NewModels(db *sql.DB) Models {
 		UserStreak:            UserStreakModel{DB: db},
 		EmotionLog:            EmotionLogModel{DB: db},
 		UserJournal:           UserJournalModel{DB: db},
-		UserTemplate:          UserTemplateModel{DB: db},
 	}
 
 }

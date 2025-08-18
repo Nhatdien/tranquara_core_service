@@ -2,8 +2,7 @@ CREATE TABLE user_journals (
     id UUID DEFAULT gen_random_uuid(),
     user_id UUID,
     title VARCHAR(50),
-    content TEXT,
-    template_id UUID REFERENCES user_templates(id),
+    short_description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id)
 );
