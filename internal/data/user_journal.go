@@ -21,6 +21,7 @@ type JournalTemplate struct {
 	ID        uuid.UUID `json:"id"`
 	Title     string    `json:"title"`
 	Content   string    `json:"content"`
+	Category  string    `json:"category"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -62,7 +63,7 @@ func (journal UserJournalModel) Get(id uuid.UUID, userID uuid.UUID) (*UserJourna
 
 func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 	query := `
-				SELECT * FROM journal_templates
+				SELECT id, title, content, category, created_at FROM journal_templates
 			`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -81,7 +82,8 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 		err = rows.Scan(
 			&journalTemplate.ID,
 			&journalTemplate.Title,
-
+			&journalTemplate.Content,
+			&journalTemplate.Category,
 			&journalTemplate.CreatedAt,
 		)
 
