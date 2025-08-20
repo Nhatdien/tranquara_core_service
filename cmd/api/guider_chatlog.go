@@ -3,8 +3,7 @@ package main
 import (
 	"net/http"
 
-	"tranquara.net/internal/data"
-	"tranquara.net/internal/validator"
+	"github.com/google/uuid"
 )
 
 //	type UserGuidenceRequest struct {
@@ -21,29 +20,22 @@ func (app *application) getChatLogHandler(w http.ResponseWriter, r *http.Request
 		app.serverErrorResponse(w, r, err)
 	}
 	var input struct {
-		data.Filter
+		journalId uuid.UUID
 	}
 
-	v := validator.New()
-
-	input.Page = app.readInt(qs, "page", 1, v)
-	input.PageSize = app.readInt(qs, "page_size", 20, v)
-	input.Sort = app.readString(qs, "sort", "created_at")
-
-	input.SortSafelist = []string{"created_at"}
-
-	if data.ValidateFilter(v, input.Filter); !v.Valid() {
-		app.failedValidationResponse(w, r, v.Errors)
-		return
-	}
-
-	chatlogs, metadata, err := app.models.GuiderChatlog.GetList(id, input.Filter)
+	input.journalId, err = uuid.Parse(app.readString(qs, "journal_id", ""))
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 
-	err = app.writeJson(w, http.StatusOK, envolope{"metadata": metadata, "chat_logs": chatlogs}, nil)
+	chatlogs, err := app.models.GuiderChatlog.GetList(id, input.journalId)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJson(w, http.StatusOK, envolope{"chat_logs": chatlogs}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return

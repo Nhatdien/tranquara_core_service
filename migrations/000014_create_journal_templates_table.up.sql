@@ -3,6 +3,7 @@ CREATE TABLE journal_templates (
     title VARCHAR(50),
     content TEXT,
     category VARCHAR(50),
+    greetings TEXT[],
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 )

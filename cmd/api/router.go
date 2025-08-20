@@ -31,6 +31,13 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/emotion_log", app.authMiddleWare(app.GetEmotionLogs))
 	router.HandlerFunc(http.MethodPost, "/v1/emotion_log", app.authMiddleWare(app.CreateEmotionLog))
 
+	//User journal routes
+	router.HandlerFunc(http.MethodGet, "/v1/journal", app.authMiddleWare(app.GetUserJournal))
+	router.HandlerFunc(http.MethodGet, "/v1/journals", app.authMiddleWare(app.GetUserJournals))
+	router.HandlerFunc(http.MethodPost, "/v1/journal", app.authMiddleWare(app.CreateUserJournal))
+	router.HandlerFunc(http.MethodPut, "/v1/journal", app.authMiddleWare(app.UpdateUserJournal))
+	router.HandlerFunc(http.MethodDelete, "/v1/journal", app.authMiddleWare(app.DeleteUserJournal))
+
 	//chat log routes
 	router.HandlerFunc(http.MethodGet, "/v1/guider_chatlogs", app.authMiddleWare(app.getChatLogHandler))
 

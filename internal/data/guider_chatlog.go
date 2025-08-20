@@ -21,11 +21,11 @@ type GuiderChatlogModel struct {
 	DB *sql.DB
 }
 
-func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, filter Filter) ([]*GuiderChatlog, Metadata, error) {
+func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, journalId uuid.UUID) ([]*GuiderChatlog, error) {
 	query := `SELECT COUNT(*) OVER(), id, user_id, journal_id, sender_type, message, created_at FROM ai_guider_chatlog 
-			  WHERE user_id = $1
+			  WHERE user_id = $1 AND journal_id = $2
 			  ORDER BY created_at ASC
-			  LIMIT $2 OFFSET $3`
+			  `
 
 	totalRecords := 0
 
@@ -34,14 +34,14 @@ func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, filter Filter) ([]
 
 	var guiderChatlogs []*GuiderChatlog
 
-	rows, err := chatlog.DB.QueryContext(context, query, userUuid, filter.limit(), filter.offset())
+	rows, err := chatlog.DB.QueryContext(context, query, userUuid, journalId)
 
 	if err != nil {
-		return guiderChatlogs, Metadata{}, err
+		return guiderChatlogs, err
 	}
 
 	if rows == nil {
-		return guiderChatlogs, Metadata{}, err
+		return guiderChatlogs, err
 	}
 	defer rows.Close()
 
@@ -57,14 +57,13 @@ func (chatlog GuiderChatlogModel) GetList(userUuid uuid.UUID, filter Filter) ([]
 			&g.CreatedAt,
 		)
 		if err != nil {
-			return guiderChatlogs, Metadata{}, err
+			return guiderChatlogs, err
 		}
 		// Make a copy for the slice
 		guiderChatlogs = append(guiderChatlogs, &g)
 	}
 
-	metadata := filter.calculateMetadata(totalRecords, filter.Page, filter.PageSize)
-	return guiderChatlogs, metadata, err
+	return guiderChatlogs, err
 }
 
 func (chatlog GuiderChatlogModel) Insert(chatLog *GuiderChatlog) (*GuiderChatlog, error) {

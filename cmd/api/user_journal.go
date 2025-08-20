@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 	"tranquara.net/internal/data"
@@ -51,29 +50,7 @@ func (app *application) GetUserJournals(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	startStr := r.URL.Query().Get("start")
-	endStr := r.URL.Query().Get("end")
-
-	if startStr == "" || endStr == "" {
-		http.Error(w, "Missing 'start' or 'end' query parameters", http.StatusBadRequest)
-		return
-	}
-
-	startTime, err := time.Parse(time.RFC3339, startStr)
-	if err != nil {
-		http.Error(w, "Invalid start time format", http.StatusBadRequest)
-		return
-	}
-
-	endTime, err := time.Parse(time.RFC3339, endStr)
-	if err != nil {
-		http.Error(w, "Invalid end time format", http.StatusBadRequest)
-		return
-	}
-
-	filter := data.TimeFilter{StartTime: startTime, EndTime: endTime}
-
-	journals, timeFilter, err := app.models.UserJournal.GetList(userID, filter)
+	journals, err := app.models.UserJournal.GetList(userID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -81,7 +58,6 @@ func (app *application) GetUserJournals(w http.ResponseWriter, r *http.Request) 
 
 	err = app.writeJson(w, http.StatusOK, envolope{
 		"user_journals": journals,
-		"filter":        timeFilter,
 	}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -118,11 +94,6 @@ func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if input.Title == "" {
-		http.Error(w, "Missing required fields", http.StatusBadRequest)
-		return
-	}
-
 	input.UserID = userID
 
 	newJournal, err := app.models.UserJournal.Insert(&input)
@@ -146,7 +117,7 @@ func (app *application) UpdateUserJournal(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if input.ID == uuid.Nil || input.Title == "" {
+	if input.ID == uuid.Nil {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
