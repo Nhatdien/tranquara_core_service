@@ -11,19 +11,19 @@ import (
 )
 
 type UserJournal struct {
-	ID               uuid.UUID `json:"id"`
-	UserID           uuid.UUID `json:"user_id"`
-	TemplateId       uuid.UUID `json:"template_id"`
-	Status           string    `json:"status"`
-	Title            string    `json:"title"`
-	ShortDescription string    `json:"short_description"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID         uuid.UUID `json:"id"`
+	UserID     uuid.UUID `json:"user_id"`
+	TemplateId uuid.UUID `json:"template_id"`
+	Title      string    `json:"title"`
+	Content    string    `json:"content"`
+	Mood       string    `json:"mood"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type JournalTemplate struct {
 	ID        uuid.UUID `json:"id"`
 	Title     string    `json:"title"`
-	Content   string    `json:"content"`
+	Content   []string  `json:"content"`
 	Category  string    `json:"category"`
 	Greetings []string  `json:"greetings"`
 	CreatedAt time.Time `json:"created_at"`
@@ -49,9 +49,9 @@ func (journal UserJournalModel) Get(id uuid.UUID, userID uuid.UUID) (*UserJourna
 		&userJournal.ID,
 		&userJournal.UserID,
 		&userJournal.TemplateId,
-		&userJournal.Status,
 		&userJournal.Title,
-		&userJournal.ShortDescription,
+		&userJournal.Content,
+		&userJournal.Mood,
 		&userJournal.CreatedAt,
 	)
 
@@ -88,7 +88,7 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 		err = rows.Scan(
 			&journalTemplate.ID,
 			&journalTemplate.Title,
-			&journalTemplate.Content,
+			pq.Array(&journalTemplate.Content),
 			&journalTemplate.Category,
 			pq.Array(&journalTemplate.Greetings),
 			&journalTemplate.CreatedAt,
@@ -115,7 +115,7 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 
 func (journal UserJournalModel) GetList(userId uuid.UUID) ([]*UserJournal, error) {
 	query := `
-				SELECT COUNT(*) OVER(), id, user_id, template_id, status, title, short_description, created_at FROM user_journals 
+				SELECT COUNT(*) OVER(), id, user_id, template_id, title, content, mood, created_at FROM user_journals 
 				WHERE user_id = $1
 				ORDER BY created_at ASC
 			`
@@ -139,9 +139,9 @@ func (journal UserJournalModel) GetList(userId uuid.UUID) ([]*UserJournal, error
 			&userJournal.ID,
 			&userJournal.UserID,
 			&userJournal.TemplateId,
-			&userJournal.Status,
 			&userJournal.Title,
-			&userJournal.ShortDescription,
+			&userJournal.Content,
+			&userJournal.Mood,
 			&userJournal.CreatedAt,
 		)
 
@@ -161,8 +161,8 @@ func (journal UserJournalModel) GetList(userId uuid.UUID) ([]*UserJournal, error
 
 func (journal UserJournalModel) Insert(userJournal *UserJournal) (*UserJournal, error) {
 	query := `
-			INSERT INTO user_journals (user_id, template_id, title, short_description)
-			VALUES ($1, $2, $3, $4)
+			INSERT INTO user_journals (user_id, template_id, title, content, mood)
+			VALUES ($1, $2, $3, $4, $5)
 			RETURNING *
 		`
 
@@ -170,14 +170,14 @@ func (journal UserJournalModel) Insert(userJournal *UserJournal) (*UserJournal, 
 
 	defer cancel()
 
-	args := []any{userJournal.UserID, userJournal.TemplateId, userJournal.Title, userJournal.ShortDescription}
+	args := []any{userJournal.UserID, userJournal.TemplateId, userJournal.Title, userJournal.Content, userJournal.Mood}
 	argsResponse := []any{
 		&userJournal.ID,
 		&userJournal.UserID,
 		&userJournal.TemplateId,
-		&userJournal.Status,
 		&userJournal.Title,
-		&userJournal.ShortDescription,
+		&userJournal.Content,
+		&userJournal.Mood,
 		&userJournal.CreatedAt}
 
 	err := journal.DB.QueryRowContext(ctx, query, args...).Scan(argsResponse...)
@@ -192,19 +192,18 @@ func (journal UserJournalModel) Insert(userJournal *UserJournal) (*UserJournal, 
 func (journal UserJournalModel) Update(userJournal *UserJournal) (*UserJournal, error) {
 	query := `
 			UPDATE user_journals
-			SET title = $1, short_description = $2, status = $3
+			SET title = $1, content = $2, mood = $3
 			WHERE id = $4
 			RETURNING *
 	`
 
-	args := []any{userJournal.Title, userJournal.ShortDescription, userJournal.Status, userJournal.ID}
+	args := []any{userJournal.Title, userJournal.Content, userJournal.Mood, userJournal.ID}
 	argsResponse := []any{
 		&userJournal.ID,
 		&userJournal.UserID,
 		&userJournal.TemplateId,
-		&userJournal.Status,
 		&userJournal.Title,
-		&userJournal.ShortDescription,
+		&userJournal.Mood,
 		&userJournal.CreatedAt}
 
 	err := journal.DB.QueryRow(query, args...).Scan(argsResponse...)
