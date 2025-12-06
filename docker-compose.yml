@@ -14,7 +14,7 @@ services:
       - tranquara-network
 
   db:
-      image: postgres
+      image: postgres:16
       environment:
           POSTGRES_DB: tranquara_core
           POSTGRES_USER: postgres
@@ -27,7 +27,7 @@ services:
         timeout: 3s
         retries: 3
       volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+        - postgres-data:/var/lib/postgresql
       networks:
       - tranquara-network
 
@@ -71,6 +71,9 @@ services:
     networks:
       - tranquara-network
 
+
+volumes:
+  postgres-data:
 networks:
   tranquara-network:
     external: true

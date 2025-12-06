@@ -1,10 +1,3 @@
-CREATE TABLE
-    user_information (
-        user_id UUID PRIMARY KEY,
-        kyc_answers JSONB,
-        name TEXT,
-        age_range VARCHAR(50),
-        gender VARCHAR(50),
-        settings JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+-- This migration is deprecated
+-- User table is now created in 000001_create_user_informations_table.up.sql
+-- Keeping this file for migration history consistency

@@ -15,6 +15,12 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
 
+	// Auth routes (public - no auth middleware)
+	router.HandlerFunc(http.MethodPost, "/v1/auth/register", app.registerUserHandler)
+
+	// User sync route (requires auth)
+	router.HandlerFunc(http.MethodPost, "/v1/users/sync", app.authMiddleWare(app.syncUserHandler))
+
 	//Exercises handlers
 	router.HandlerFunc(http.MethodGet, "/v1/exercise/:id", app.authMiddleWare(app.showExerciseHanlder))
 	router.HandlerFunc(http.MethodGet, "/v1/exercise", app.authMiddleWare(app.listExerciseHandler))

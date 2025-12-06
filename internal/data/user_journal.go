@@ -203,6 +203,7 @@ func (journal UserJournalModel) Update(userJournal *UserJournal) (*UserJournal, 
 		&userJournal.UserID,
 		&userJournal.TemplateId,
 		&userJournal.Title,
+		&userJournal.Content,
 		&userJournal.Mood,
 		&userJournal.CreatedAt}
 

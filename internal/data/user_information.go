@@ -11,13 +11,17 @@ import (
 )
 
 type UserInformation struct {
-	UserID     uuid.UUID      `json:"user_id"`
-	Name       string         `json:"name"`
-	AgeRange   string         `json:"age_range"`
-	Gender     string         `json:"gender"`
-	KYCAnswers map[string]any `json:"kyc_answers"` // handles JSONB
-	Settings   map[string]any `json:"settings"`
-	CreatedAt  time.Time      `json:"created_at"`
+	UserID        uuid.UUID      `json:"user_id"`
+	Email         string         `json:"email"`
+	Username      string         `json:"username"`
+	OAuthProvider string         `json:"oauth_provider"`
+	Name          string         `json:"name"`
+	AgeRange      string         `json:"age_range"`
+	Gender        string         `json:"gender"`
+	KYCAnswers    map[string]any `json:"kyc_answers"` // handles JSONB
+	Settings      map[string]any `json:"settings"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
 type UserInformationModel struct {
@@ -26,8 +30,8 @@ type UserInformationModel struct {
 
 func (m UserInformationModel) Get(userID uuid.UUID) (*UserInformation, error) {
 	query := `
-		SELECT user_id, name, age_range, gender, kyc_answers, settings, created_at
-		FROM user_information
+		SELECT user_id, email, username, oauth_provider, name, age_range, gender, kyc_answers, settings, created_at, updated_at
+		FROM user_informations
 		WHERE user_id = $1
 	`
 
@@ -40,12 +44,16 @@ func (m UserInformationModel) Get(userID uuid.UUID) (*UserInformation, error) {
 
 	err := m.DB.QueryRowContext(ctx, query, userID).Scan(
 		&info.UserID,
+		&info.Email,
+		&info.Username,
+		&info.OAuthProvider,
 		&info.Name,
 		&info.AgeRange,
 		&info.Gender,
 		&kycRaw,
 		&settingRaw,
 		&info.CreatedAt,
+		&info.UpdatedAt,
 	)
 
 	if err != nil {
@@ -70,9 +78,9 @@ func (m UserInformationModel) Get(userID uuid.UUID) (*UserInformation, error) {
 
 func (m UserInformationModel) Insert(info *UserInformation) error {
 	query := `
-		INSERT INTO user_information (user_id, name, age_range, gender, kyc_answers, settings)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING user_id, name, age_range, gender, kyc_answers, settings, created_at
+		INSERT INTO user_informations (user_id, email, username, oauth_provider, name, age_range, gender, kyc_answers, settings)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING user_id, email, username, oauth_provider, name, age_range, gender, kyc_answers, settings, created_at, updated_at
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -91,6 +99,9 @@ func (m UserInformationModel) Insert(info *UserInformation) error {
 	var kycAnswersByte, settingBytes []byte
 	err = m.DB.QueryRowContext(ctx, query,
 		info.UserID,
+		info.Email,
+		info.Username,
+		info.OAuthProvider,
 		info.Name,
 		info.AgeRange,
 		info.Gender,
@@ -98,12 +109,16 @@ func (m UserInformationModel) Insert(info *UserInformation) error {
 		settingJSON,
 	).Scan(
 		&info.UserID,
+		&info.Email,
+		&info.Username,
+		&info.OAuthProvider,
 		&info.Name,
 		&info.AgeRange,
 		&info.Gender,
 		&kycAnswersByte,
 		&settingBytes,
 		&info.CreatedAt,
+		&info.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil // or return ErrNotFound
@@ -123,15 +138,16 @@ func (m UserInformationModel) Insert(info *UserInformation) error {
 
 func (m UserInformationModel) Update(info *UserInformation) error {
 	query := `
-		UPDATE user_information
+		UPDATE user_informations
 		SET 
-			name = $1
+			name = $1,
 			age_range = $2,
 			gender = $3,
 			kyc_answers = $4,
-			settings = $5
+			settings = $5,
+			updated_at = NOW()
 		WHERE user_id = $6
-		RETURNING *
+		RETURNING user_id, email, username, oauth_provider, name, age_range, gender, kyc_answers, settings, created_at, updated_at
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -147,7 +163,8 @@ func (m UserInformationModel) Update(info *UserInformation) error {
 		return err
 	}
 
-	return m.DB.QueryRowContext(ctx, query,
+	var kycAnswersByte, settingBytes []byte
+	err = m.DB.QueryRowContext(ctx, query,
 		info.Name,
 		info.AgeRange,
 		info.Gender,
@@ -156,11 +173,28 @@ func (m UserInformationModel) Update(info *UserInformation) error {
 		info.UserID,
 	).Scan(
 		&info.UserID,
+		&info.Email,
+		&info.Username,
+		&info.OAuthProvider,
 		&info.Name,
 		&info.AgeRange,
 		&info.Gender,
-		&info.KYCAnswers,
-		&info.Settings,
+		&kycAnswersByte,
+		&settingBytes,
 		&info.CreatedAt,
+		&info.UpdatedAt,
 	)
+
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(kycAnswersByte, &info.KYCAnswers); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(settingBytes, &info.Settings); err != nil {
+		return err
+	}
+
+	return nil
 }
