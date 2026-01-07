@@ -56,6 +56,11 @@ docker-rebuild: ## Rebuild and restart services
 	@echo "🔨 Rebuilding services..."
 	docker-compose up -d --build
 
+docker-rebuild-force: ## Force rebuild (no cache) and restart services
+	@echo "🔨 Force rebuilding services (no cache)..."
+	docker-compose build --no-cache
+	docker-compose up -d
+
 docker-clean: ## Stop services and remove volumes (⚠️  deletes all data)
 	@echo "⚠️  WARNING: This will delete all database data!"
 	@echo "Press Ctrl+C to cancel, or wait 5 seconds..."

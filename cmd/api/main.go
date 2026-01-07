@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"log"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -91,13 +91,42 @@ func main() {
 
 	models := data.NewModels(db)
 
-	channel, conn, err := pubsub.Serve(&models)
+	// Connect to RabbitMQ with retry logic
+	var channel *amqp.Channel
+	var conn *amqp.Connection
+	maxRetries := 10
+	retryDelay := 5 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		channel, conn, err = pubsub.Serve(&models)
+		if err == nil {
+			logger.PrintInfo("Successfully connected to RabbitMQ", nil)
+			break
+		}
+
+		logger.PrintError(err, map[string]string{
+			"attempt": fmt.Sprintf("%d/%d", i+1, maxRetries),
+		})
+
+		if i < maxRetries-1 {
+			logger.PrintInfo("Retrying RabbitMQ connection...", map[string]string{
+				"delay": retryDelay.String(),
+			})
+			time.Sleep(retryDelay)
+		}
+	}
 
 	if err != nil {
-		logger.PrintError(err, nil)
+		logger.PrintError(err, map[string]string{
+			"message": "Failed to connect to RabbitMQ after all retries",
+		})
+		// Continue without RabbitMQ - service can still handle HTTP requests
+		logger.PrintInfo("Starting service without RabbitMQ connection", nil)
+	} else {
+		defer channel.Close()
+		defer conn.Close()
+		logger.PrintInfo("Waiting for messages", nil)
 	}
-	defer channel.Close()
-	defer conn.Close()
 
 	app := &application{
 		config:        cfg,
@@ -106,9 +135,6 @@ func main() {
 		models:        models,
 		mailer:        mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
-
-	log.Println("Successfully connected to RabbitMQ")
-	log.Println("Waiting for messages")
 
 	err = app.serve()
 	logger.PrintFatal(err, nil)

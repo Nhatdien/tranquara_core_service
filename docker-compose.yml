@@ -10,8 +10,17 @@ services:
     depends_on:
        db:
           condition: service_healthy
+       migrate:
+          condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/v1/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - tranquara-network
+    restart: unless-stopped
 
   db:
       image: postgres:16
@@ -54,12 +63,12 @@ services:
       volumes:
           - ./migrations:/migrations
       command: ["-path", "/migrations", "-database",  "postgres://postgres:Nhatdien123@db:5432/tranquara_core?sslmode=disable", "up"]
-      links: 
-          - db
+      depends_on:
+        db:
+          condition: service_healthy
       networks:
       - tranquara-network
-      depends_on:
-        - core_service
+      restart: on-failure
   adminer:
     image: adminer
     ports:

@@ -10,9 +10,17 @@ COPY . .
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN go build -ldflags="-s -w" -o main ./cmd/api
 
-FROM scratch
+FROM alpine:latest
 
-COPY --from=builder ["/build/main", "/"]
-COPY --from=builder ["/build/publicKey.pem", "/"]
+# Install necessary tools for wait-for-it script, healthcheck, and SSL certificates
+RUN apk --no-cache add ca-certificates netcat-openbsd wget
 
-ENTRYPOINT [ "/main" ]
+WORKDIR /app
+
+COPY --from=builder /build/main /app/
+COPY --from=builder /build/publicKey.pem /app/
+COPY wait-for-it.sh /app/
+
+RUN chmod +x /app/wait-for-it.sh
+
+ENTRYPOINT ["/app/wait-for-it.sh", "db:5432", "--", "/app/main"]
