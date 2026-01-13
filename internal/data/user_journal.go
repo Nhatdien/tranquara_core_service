@@ -3,30 +3,54 @@ package data
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
 type UserJournal struct {
-	ID         uuid.UUID `json:"id"`
-	UserID     uuid.UUID `json:"user_id"`
-	TemplateId uuid.UUID `json:"template_id"`
-	Title      string    `json:"title"`
-	Content    string    `json:"content"`
-	Mood       string    `json:"mood"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID           uuid.UUID  `json:"id"`
+	UserID       uuid.UUID  `json:"user_id"`
+	CollectionID *uuid.UUID `json:"collection_id,omitempty"` // Nullable for free-form journals
+	Title        string     `json:"title"`
+	Content      string     `json:"content"`                // TipTap JSON with embedded emotions + AI
+	ContentHTML  *string    `json:"content_html,omitempty"` // Rendered HTML preview
+	MoodScore    *int       `json:"mood_score,omitempty"`   // 1-10 scale
+	MoodLabel    *string    `json:"mood_label,omitempty"`   // "Storm", "Sunny", etc.
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+// SlideGroup represents a group of slides in a collection
+type SlideGroup struct {
+	ID          string      `json:"id"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	Position    int         `json:"position"`
+	Slides      []SlideData `json:"slides"`
+}
+
+// SlideData represents individual slide configuration
+type SlideData struct {
+	ID       string                 `json:"id"`
+	Type     string                 `json:"type"` // emotion_log, sleep_check, journal_prompt, doc
+	Question string                 `json:"question,omitempty"`
+	Title    string                 `json:"title,omitempty"`
+	Content  string                 `json:"content,omitempty"`
+	Config   map[string]interface{} `json:"config,omitempty"`
 }
 
 type JournalTemplate struct {
-	ID        uuid.UUID `json:"id"`
-	Title     string    `json:"title"`
-	Content   []string  `json:"content"`
-	Category  string    `json:"category"`
-	Greetings []string  `json:"greetings"`
-	CreatedAt time.Time `json:"created_at"`
+	ID          uuid.UUID       `json:"id"`
+	Title       string          `json:"title"`
+	Description *string         `json:"description,omitempty"`
+	Category    string          `json:"category"`
+	SlideGroups json.RawMessage `json:"slide_groups"` // JSONB stored as raw message
+	IsActive    bool            `json:"is_active"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
 type UserJournalModel struct {
@@ -35,24 +59,28 @@ type UserJournalModel struct {
 
 func (journal UserJournalModel) Get(id uuid.UUID, userID uuid.UUID) (*UserJournal, error) {
 	query := `
-				SELECT * FROM user_journals 
-				WHERE id = $1 AND user_id = $2  
-			`
+		SELECT id, user_id, collection_id, title, content, content_html, 
+		       mood_score, mood_label, created_at, updated_at 
+		FROM user_journals 
+		WHERE id = $1 AND user_id = $2  
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-
 	defer cancel()
 
 	var userJournal UserJournal
 
-	err := journal.DB.QueryRowContext(ctx, query, id).Scan(
+	err := journal.DB.QueryRowContext(ctx, query, id, userID).Scan(
 		&userJournal.ID,
 		&userJournal.UserID,
-		&userJournal.TemplateId,
+		&userJournal.CollectionID,
 		&userJournal.Title,
 		&userJournal.Content,
-		&userJournal.Mood,
+		&userJournal.ContentHTML,
+		&userJournal.MoodScore,
+		&userJournal.MoodLabel,
 		&userJournal.CreatedAt,
+		&userJournal.UpdatedAt,
 	)
 
 	if err != nil {
@@ -69,29 +97,34 @@ func (journal UserJournalModel) Get(id uuid.UUID, userID uuid.UUID) (*UserJourna
 
 func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 	query := `
-				SELECT id, title, content, category, greetings, created_at FROM journal_templates
-			`
+		SELECT id, title, description, category, slide_groups, is_active, created_at, updated_at 
+		FROM journal_templates
+		WHERE is_active = true
+		ORDER BY category, title
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-
 	defer cancel()
 
 	journalTemplates := []*JournalTemplate{}
 
 	rows, err := journal.DB.QueryContext(ctx, query)
-
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var journalTemplate JournalTemplate
 		err = rows.Scan(
 			&journalTemplate.ID,
 			&journalTemplate.Title,
-			pq.Array(&journalTemplate.Content),
+			&journalTemplate.Description,
 			&journalTemplate.Category,
-			pq.Array(&journalTemplate.Greetings),
+			&journalTemplate.SlideGroups,
+			&journalTemplate.IsActive,
 			&journalTemplate.CreatedAt,
+			&journalTemplate.UpdatedAt,
 		)
 
 		if err != nil {
@@ -101,7 +134,7 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 		journalTemplates = append(journalTemplates, &journalTemplate)
 	}
 
-	if err != nil {
+	if err = rows.Err(); err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
 			return nil, ErrRecordNotFound
@@ -115,34 +148,39 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 
 func (journal UserJournalModel) GetList(userId uuid.UUID) ([]*UserJournal, error) {
 	query := `
-				SELECT COUNT(*) OVER(), id, user_id, template_id, title, content, mood, created_at FROM user_journals 
-				WHERE user_id = $1
-				ORDER BY created_at ASC
-			`
+		SELECT COUNT(*) OVER(), id, user_id, collection_id, title, content, content_html,
+		       mood_score, mood_label, created_at, updated_at 
+		FROM user_journals 
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-
 	defer cancel()
 
 	totalRecords := 0
 	userJournals := []*UserJournal{}
 
 	rows, err := journal.DB.QueryContext(ctx, query, userId)
-
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var userJournal UserJournal
 		err = rows.Scan(
 			&totalRecords,
 			&userJournal.ID,
 			&userJournal.UserID,
-			&userJournal.TemplateId,
+			&userJournal.CollectionID,
 			&userJournal.Title,
 			&userJournal.Content,
-			&userJournal.Mood,
+			&userJournal.ContentHTML,
+			&userJournal.MoodScore,
+			&userJournal.MoodLabel,
 			&userJournal.CreatedAt,
+			&userJournal.UpdatedAt,
 		)
 
 		if err != nil {
@@ -161,24 +199,36 @@ func (journal UserJournalModel) GetList(userId uuid.UUID) ([]*UserJournal, error
 
 func (journal UserJournalModel) Insert(userJournal *UserJournal) (*UserJournal, error) {
 	query := `
-			INSERT INTO user_journals (user_id, template_id, title, content, mood)
-			VALUES ($1, $2, $3, $4, $5)
-			RETURNING *
-		`
+		INSERT INTO user_journals (user_id, collection_id, title, content, content_html, mood_score, mood_label)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, user_id, collection_id, title, content, content_html, mood_score, mood_label, created_at, updated_at
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-
 	defer cancel()
 
-	args := []any{userJournal.UserID, userJournal.TemplateId, userJournal.Title, userJournal.Content, userJournal.Mood}
+	args := []any{
+		userJournal.UserID,
+		userJournal.CollectionID,
+		userJournal.Title,
+		userJournal.Content,
+		userJournal.ContentHTML,
+		userJournal.MoodScore,
+		userJournal.MoodLabel,
+	}
+
 	argsResponse := []any{
 		&userJournal.ID,
 		&userJournal.UserID,
-		&userJournal.TemplateId,
+		&userJournal.CollectionID,
 		&userJournal.Title,
 		&userJournal.Content,
-		&userJournal.Mood,
-		&userJournal.CreatedAt}
+		&userJournal.ContentHTML,
+		&userJournal.MoodScore,
+		&userJournal.MoodLabel,
+		&userJournal.CreatedAt,
+		&userJournal.UpdatedAt,
+	}
 
 	err := journal.DB.QueryRowContext(ctx, query, args...).Scan(argsResponse...)
 
@@ -191,21 +241,33 @@ func (journal UserJournalModel) Insert(userJournal *UserJournal) (*UserJournal, 
 
 func (journal UserJournalModel) Update(userJournal *UserJournal) (*UserJournal, error) {
 	query := `
-			UPDATE user_journals
-			SET title = $1, content = $2, mood = $3
-			WHERE id = $4
-			RETURNING *
+		UPDATE user_journals
+		SET title = $1, content = $2, content_html = $3, mood_score = $4, mood_label = $5
+		WHERE id = $6
+		RETURNING id, user_id, collection_id, title, content, content_html, mood_score, mood_label, created_at, updated_at
 	`
 
-	args := []any{userJournal.Title, userJournal.Content, userJournal.Mood, userJournal.ID}
+	args := []any{
+		userJournal.Title,
+		userJournal.Content,
+		userJournal.ContentHTML,
+		userJournal.MoodScore,
+		userJournal.MoodLabel,
+		userJournal.ID,
+	}
+
 	argsResponse := []any{
 		&userJournal.ID,
 		&userJournal.UserID,
-		&userJournal.TemplateId,
+		&userJournal.CollectionID,
 		&userJournal.Title,
 		&userJournal.Content,
-		&userJournal.Mood,
-		&userJournal.CreatedAt}
+		&userJournal.ContentHTML,
+		&userJournal.MoodScore,
+		&userJournal.MoodLabel,
+		&userJournal.CreatedAt,
+		&userJournal.UpdatedAt,
+	}
 
 	err := journal.DB.QueryRow(query, args...).Scan(argsResponse...)
 

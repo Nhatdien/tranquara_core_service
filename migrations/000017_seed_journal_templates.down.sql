@@ -1,0 +1,6 @@
+-- Rollback seed data migration 000017
+DELETE FROM journal_templates WHERE id IN (
+    '55555555-5555-5555-5555-555555555555'::uuid,
+    '33333333-3333-3333-3333-333333333333'::uuid,
+    '44444444-4444-4444-4444-444444444444'::uuid
+);

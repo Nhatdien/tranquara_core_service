@@ -17,10 +17,10 @@ RUN apk --no-cache add ca-certificates netcat-openbsd wget
 
 WORKDIR /app
 
-COPY --from=builder /build/main /app/
-COPY --from=builder /build/publicKey.pem /app/
+COPY --from=builder /build/main /
+COPY --from=builder /build/publicKey.pem /
 COPY wait-for-it.sh /app/
 
 RUN chmod +x /app/wait-for-it.sh
 
-ENTRYPOINT ["/app/wait-for-it.sh", "db:5432", "--", "/app/main"]
+ENTRYPOINT ["/app/wait-for-it.sh", "db:5432", "--", "/main"]
