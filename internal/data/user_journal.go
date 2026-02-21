@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -301,4 +303,125 @@ func (journal UserJournalModel) Delete(id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+// GetListWithFilter retrieves journals with advanced filtering, searching, and pagination.
+// Uses the new QueryFilter builder pattern for cleaner query construction.
+//
+// Supports:
+//   - Pagination (page, page_size)
+//   - Sorting (any column in safelist)
+//   - Full-text search via tsvector (title + content_html)
+//   - Time range filtering (created_at, updated_at)
+//   - Collection filtering
+func (journal UserJournalModel) GetListWithFilter(userID uuid.UUID, filter *QueryFilter, collectionID *uuid.UUID) ([]*UserJournal, Metadata, error) {
+	// Build the query dynamically based on filter options
+	var queryBuilder strings.Builder
+	var args []interface{}
+	paramIndex := 1
+
+	// Base SELECT with COUNT for pagination
+	queryBuilder.WriteString(`
+		SELECT COUNT(*) OVER(), id, user_id, collection_id, title, content, content_html,
+		       mood_score, mood_label, created_at, updated_at
+		FROM user_journals
+		WHERE user_id = $1
+	`)
+	args = append(args, userID)
+	paramIndex++
+
+	// Collection filter (optional)
+	if collectionID != nil {
+		queryBuilder.WriteString(fmt.Sprintf(" AND collection_id = $%d", paramIndex))
+		args = append(args, *collectionID)
+		paramIndex++
+	}
+
+	// Full-text search condition
+	if filter.HasSearch() {
+		searchSQL, searchArgs := filter.SearchConditionSQL(paramIndex)
+		if searchSQL != "" {
+			queryBuilder.WriteString(" AND ")
+			queryBuilder.WriteString(searchSQL)
+			args = append(args, searchArgs...)
+			paramIndex++
+		}
+	}
+
+	// Time range filter
+	if filter.HasTimeRange() {
+		timeSQL, timeArgs, nextIdx := filter.TimeRangeConditionSQL(paramIndex)
+		if timeSQL != "" {
+			queryBuilder.WriteString(" AND ")
+			queryBuilder.WriteString(timeSQL)
+			args = append(args, timeArgs...)
+			paramIndex = nextIdx
+		}
+	}
+
+	// ORDER BY clause
+	// If searching, optionally order by relevance first
+	if filter.HasSearch() {
+		rankSQL := filter.FullTextRankSQL(2) // search query is at position 2 after userID
+		if rankSQL != "" {
+			queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %s DESC", rankSQL))
+			if filter.SortClause() != "" {
+				queryBuilder.WriteString(fmt.Sprintf(", %s", filter.SortClause()))
+			}
+		} else if filter.SortClause() != "" {
+			queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %s", filter.SortClause()))
+		}
+	} else if filter.SortClause() != "" {
+		queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %s", filter.SortClause()))
+	} else {
+		queryBuilder.WriteString(" ORDER BY created_at DESC")
+	}
+
+	// Pagination
+	queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d OFFSET $%d", paramIndex, paramIndex+1))
+	args = append(args, filter.Limit(), filter.Offset())
+
+	// Execute query
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	rows, err := journal.DB.QueryContext(ctx, queryBuilder.String(), args...)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+	defer rows.Close()
+
+	totalRecords := 0
+	userJournals := []*UserJournal{}
+
+	for rows.Next() {
+		var uj UserJournal
+		err = rows.Scan(
+			&totalRecords,
+			&uj.ID,
+			&uj.UserID,
+			&uj.CollectionID,
+			&uj.Title,
+			&uj.Content,
+			&uj.ContentHTML,
+			&uj.MoodScore,
+			&uj.MoodLabel,
+			&uj.CreatedAt,
+			&uj.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, Metadata{}, err
+		}
+
+		userJournals = append(userJournals, &uj)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, Metadata{}, err
+	}
+
+	metadata := filter.CalculateMetadata(totalRecords)
+
+	return userJournals, metadata, nil
 }

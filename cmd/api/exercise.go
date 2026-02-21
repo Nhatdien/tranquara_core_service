@@ -146,30 +146,22 @@ func (app *application) deleteExerciseHandler(w http.ResponseWriter, r *http.Req
 func (app *application) listExerciseHandler(w http.ResponseWriter, r *http.Request) {
 
 	v := validator.New()
-
 	qs := r.URL.Query()
 
-	var input struct {
-		Title        string
-		ExerciseType string
-		data.Filter
-	}
+	title := app.readString(qs, "title", "")
+	exerciseType := app.readString(qs, "exercise_type", "")
 
-	input.Title = app.readString(qs, "title", "")
-	input.ExerciseType = app.readString(qs, "exercise_type", "")
+	filter := app.readQueryFilter(qs, v, DefaultFilterOptions(
+		"exercise_id",
+		[]string{"exercise_id", "title", "exercise_type", "-exercise_id", "-title", "-exercise_type"},
+	))
 
-	input.Page = app.readInt(qs, "page", 1, v)
-	input.PageSize = app.readInt(qs, "page_size", 20, v)
-	input.Sort = app.readString(qs, "sort", "exercise_id")
-
-	input.SortSafelist = []string{"exercise_id", "title", "exercise_type", "-exercise_id", "-title", "-exercise_type"}
-
-	if data.ValidateFilter(v, input.Filter); !v.Valid() {
+	if !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	exercises, metadata, err := app.models.Exercise.GetList(input.Title, input.ExerciseType, input.Filter)
+	exercises, metadata, err := app.models.Exercise.GetList(title, exerciseType, filter)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -180,6 +172,5 @@ func (app *application) listExerciseHandler(w http.ResponseWriter, r *http.Reque
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	// Dump the contents of the input struct in a HTTP response.
 
 }

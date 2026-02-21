@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"tranquara.net/internal/data"
+	"tranquara.net/internal/validator"
 )
 
 func (app *application) GetUserJournal(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +51,45 @@ func (app *application) GetUserJournals(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	journals, err := app.models.UserJournal.GetList(userID)
+	v := validator.New()
+	qs := r.URL.Query()
+
+	// Parse filter using the new builder pattern
+	filter := app.readQueryFilter(qs, v, FilterOptions{
+		DefaultPage:     1,
+		DefaultPageSize: 20,
+		DefaultSort:     "-created_at",
+		SortSafelist: []string{
+			"created_at", "-created_at",
+			"updated_at", "-updated_at",
+			"title", "-title",
+			"mood_score", "-mood_score",
+		},
+		TsVectorColumn: "search_vector", // Full-text search column
+		UseFullText:    true,
+		TimeField:      "created_at", // Enable time range filtering
+	})
+
+	// Optional collection filter
+	var collectionID *uuid.UUID
+	if collectionIDStr := app.readString(qs, "collection_id", ""); collectionIDStr != "" {
+		parsed, err := uuid.Parse(collectionIDStr)
+		if err != nil {
+			v.AddError("collection_id", "must be a valid UUID")
+		} else {
+			collectionID = &parsed
+		}
+	}
+
+	// Validate filter
+	filter.Validate(v)
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// Fetch journals with filter
+	journals, metadata, err := app.models.UserJournal.GetListWithFilter(userID, filter, collectionID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -58,6 +97,7 @@ func (app *application) GetUserJournals(w http.ResponseWriter, r *http.Request) 
 
 	err = app.writeJson(w, http.StatusOK, envolope{
 		"user_journals": journals,
+		"metadata":      metadata,
 	}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -100,6 +140,12 @@ func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
+	}
+
+	// Auto-update streak when a journal is created
+	if streakErr := app.models.UserStreak.UpdateOrReset(userID); streakErr != nil {
+		app.logger.PrintError(streakErr, map[string]string{"action": "update_streak_on_journal_create"})
+		// Don't fail journal creation if streak update fails
 	}
 
 	err = app.writeJson(w, http.StatusCreated, newJournal, nil)

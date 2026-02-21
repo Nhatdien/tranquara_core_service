@@ -21,7 +21,7 @@ type EmotionLogModel struct {
 	DB *sql.DB
 }
 
-func (emo EmotionLogModel) GetList(userId uuid.UUID, filter TimeFilter) ([]*EmotionLog, TimeFilter, error) {
+func (emo EmotionLogModel) GetList(userId uuid.UUID, filter *QueryFilter) ([]*EmotionLog, Metadata, error) {
 	query := `
 				SELECT COUNT(*) OVER(), id, emotion, source, context, created_at FROM emotion_logs 
 				WHERE user_id = $1
@@ -36,10 +36,10 @@ func (emo EmotionLogModel) GetList(userId uuid.UUID, filter TimeFilter) ([]*Emot
 	totalRecords := 0
 	emotionLogs := []*EmotionLog{}
 
-	rows, err := emo.DB.QueryContext(ctx, query, filter.StartTime, filter.EndTime)
+	rows, err := emo.DB.QueryContext(ctx, query, userId, filter.StartTime, filter.EndTime)
 
 	if err != nil {
-		return nil, TimeFilter{}, err
+		return nil, Metadata{}, err
 	}
 	for rows.Next() {
 		var emotionLog EmotionLog
@@ -53,17 +53,19 @@ func (emo EmotionLogModel) GetList(userId uuid.UUID, filter TimeFilter) ([]*Emot
 		)
 
 		if err != nil {
-			return nil, TimeFilter{}, err
+			return nil, Metadata{}, err
 		}
 
 		emotionLogs = append(emotionLogs, &emotionLog)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, TimeFilter{}, err
+		return nil, Metadata{}, err
 	}
 
-	return emotionLogs, filter, nil
+	metadata := filter.CalculateMetadata(totalRecords)
+
+	return emotionLogs, metadata, nil
 }
 
 func (emo EmotionLogModel) Insert(emotionLog *EmotionLog) (*EmotionLog, error) {

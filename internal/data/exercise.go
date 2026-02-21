@@ -69,14 +69,19 @@ func (e ExerciseModel) Get(id int64) (*Exercise, error) {
 	return &exercise, nil
 }
 
-func (e ExerciseModel) GetList(title string, exerciseType string, filter Filter) ([]*Exercise, Metadata, error) {
+// GetList retrieves exercises with filtering using the new QueryFilter pattern.
+// Supports:
+//   - Full-text search on title
+//   - Exercise type filtering
+//   - Pagination and sorting
+func (e ExerciseModel) GetList(title string, exerciseType string, filter *QueryFilter) ([]*Exercise, Metadata, error) {
 	query := fmt.Sprintf(`
 				SELECT COUNT(*) OVER(),  exercise_id, title, description, media_link, exercise_type  FROM exercises 
 				WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 				AND (LOWER(exercise_type) = LOWER($2) OR $2 = '')
-				ORDER BY %s %s
+				ORDER BY %s
 				LIMIT $3 OFFSET $4
-			`, filter.sortColumn(), filter.sortDirection())
+			`, filter.SortClause())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
@@ -85,7 +90,7 @@ func (e ExerciseModel) GetList(title string, exerciseType string, filter Filter)
 	totalRecords := 0
 	exercises := []*Exercise{}
 
-	rows, err := e.DB.QueryContext(ctx, query, title, exerciseType, filter.limit(), filter.offset())
+	rows, err := e.DB.QueryContext(ctx, query, title, exerciseType, filter.Limit(), filter.Offset())
 
 	if err != nil {
 		return nil, Metadata{}, err
@@ -112,7 +117,7 @@ func (e ExerciseModel) GetList(title string, exerciseType string, filter Filter)
 		return nil, Metadata{}, err
 	}
 
-	metadata := filter.calculateMetadata(totalRecords, filter.Page, filter.PageSize)
+	metadata := filter.CalculateMetadata(totalRecords)
 
 	return exercises, metadata, nil
 }

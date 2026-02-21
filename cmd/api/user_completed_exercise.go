@@ -55,43 +55,38 @@ func (app *application) createUserCompletedExerciseHandler(w http.ResponseWriter
 func (app *application) listCompletedExerciseHandler(w http.ResponseWriter, r *http.Request) {
 
 	v := validator.New()
-
 	qs := r.URL.Query()
 
-	var input struct {
-		FromTime time.Time `json:"from_time"`
-		ToTime   time.Time `json:"to_time"`
-		data.Filter
-	}
-
-	fromStr := app.readString(qs, "from_time", "") // fallback to empty string
+	// Parse time range
+	var fromTime, toTime time.Time
 	var err error
+
+	fromStr := app.readString(qs, "from_time", "")
 	if fromStr == "" {
-		input.FromTime = time.Time{} // zero value
+		fromTime = time.Time{} // zero value
 	} else {
-		input.FromTime, err = time.Parse(time.RFC3339, fromStr)
+		fromTime, err = time.Parse(time.RFC3339, fromStr)
 		if err != nil {
-			// handle invalid time format
+			v.AddError("from_time", "must be a valid RFC3339 timestamp")
 		}
 	}
 
-	toStr := app.readString(qs, "to_time", "") // fallback to empty string
+	toStr := app.readString(qs, "to_time", "")
 	if toStr == "" {
-		input.ToTime = time.Now() // zero value
+		toTime = time.Now()
 	} else {
-		input.ToTime, err = time.Parse(time.RFC3339, toStr)
+		toTime, err = time.Parse(time.RFC3339, toStr)
 		if err != nil {
-			// handle invalid time format
+			v.AddError("to_time", "must be a valid RFC3339 timestamp")
 		}
 	}
 
-	input.Page = app.readInt(qs, "page", 1, v)
-	input.PageSize = app.readInt(qs, "page_size", 20, v)
-	input.Sort = app.readString(qs, "sort", "id")
+	filter := app.readQueryFilter(qs, v, DefaultFilterOptions(
+		"id",
+		[]string{"id", "-id"},
+	))
 
-	input.SortSafelist = []string{"id", "-id"}
-
-	if data.ValidateFilter(v, input.Filter); !v.Valid() {
+	if !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
@@ -102,7 +97,7 @@ func (app *application) listCompletedExerciseHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	completedExercises, metadata, err := app.models.UserCompletedExercise.GetList(input.FromTime, input.ToTime, userUUID, input.Filter)
+	completedExercises, metadata, err := app.models.UserCompletedExercise.GetList(fromTime, toTime, userUUID, filter)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -113,6 +108,4 @@ func (app *application) listCompletedExerciseHandler(w http.ResponseWriter, r *h
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	// Dump the contents of the input struct in a HTTP response.
-
 }

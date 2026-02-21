@@ -43,14 +43,14 @@ func (uce *UserCompletedExerciseModel) Insert(completeExercise *UserCompletedExe
 	return uce.DB.QueryRowContext(ctx, query, args...).Scan(argsResponse...)
 }
 
-func (e UserCompletedExerciseModel) GetList(fromTime, toTime time.Time, userID uuid.UUID, filter Filter) ([]*UserCompletedExercise, Metadata, error) {
+func (e UserCompletedExerciseModel) GetList(fromTime, toTime time.Time, userID uuid.UUID, filter *QueryFilter) ([]*UserCompletedExercise, Metadata, error) {
 	query := fmt.Sprintf(`
 					SELECT COUNT(*) OVER(), user_id, duration , exercise_id , completed_at FROM user_completed_exercises 
 					WHERE completed_at BETWEEN $1 AND $2
 					AND user_id = $3
 					ORDER BY %s %s, id DESC
 					LIMIT $4 OFFSET $5
-				`, filter.sortColumn(), filter.sortDirection())
+				`, filter.SortColumn(), filter.SortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
@@ -59,7 +59,7 @@ func (e UserCompletedExerciseModel) GetList(fromTime, toTime time.Time, userID u
 	totalRecords := 0
 	completedExercises := []*UserCompletedExercise{}
 
-	rows, err := e.DB.QueryContext(ctx, query, fromTime, toTime, userID, filter.limit(), filter.offset())
+	rows, err := e.DB.QueryContext(ctx, query, fromTime, toTime, userID, filter.Limit(), filter.Offset())
 
 	if err != nil {
 		return nil, Metadata{}, err
@@ -84,7 +84,7 @@ func (e UserCompletedExerciseModel) GetList(fromTime, toTime time.Time, userID u
 		return nil, Metadata{}, err
 	}
 
-	metadata := filter.calculateMetadata(totalRecords, filter.Page, filter.PageSize)
+	metadata := filter.CalculateMetadata(totalRecords)
 
 	return completedExercises, metadata, nil
 }

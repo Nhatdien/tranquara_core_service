@@ -6,9 +6,13 @@ import (
 
 	"github.com/google/uuid"
 	"tranquara.net/internal/data"
+	"tranquara.net/internal/validator"
 )
 
 func (app *application) GetEmotionLogs(w http.ResponseWriter, r *http.Request) {
+	v := validator.New()
+	qs := r.URL.Query()
+
 	// Parse query parameters
 	id, err := app.GetUserUUIDFromContext(r.Context())
 
@@ -16,30 +20,41 @@ func (app *application) GetEmotionLogs(w http.ResponseWriter, r *http.Request) {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	startStr := r.URL.Query().Get("start")
-	endStr := r.URL.Query().Get("end")
+
+	startStr := app.readString(qs, "start", "")
+	endStr := app.readString(qs, "end", "")
 
 	if startStr == "" || endStr == "" {
-		http.Error(w, "Missing query parameters", http.StatusBadRequest)
+		app.badRequestResponse(w, r, nil)
 		return
 	}
 
 	startTime, err := time.Parse(time.RFC3339, startStr)
 	if err != nil {
-		http.Error(w, "Invalid start time format", http.StatusBadRequest)
-		return
+		v.AddError("start", "must be a valid RFC3339 timestamp")
 	}
 
 	endTime, err := time.Parse(time.RFC3339, endStr)
 	if err != nil {
-		http.Error(w, "Invalid end time format", http.StatusBadRequest)
+		v.AddError("end", "must be a valid RFC3339 timestamp")
+	}
+
+	filter := app.readQueryFilter(qs, v, TimeRangeFilterOptions(
+		"created_at",
+		[]string{"created_at", "-created_at"},
+		"created_at",
+	))
+
+	// Apply time range to filter
+	filter.WithTimeRange(&startTime, &endTime, "created_at")
+
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	filter := data.TimeFilter{StartTime: startTime, EndTime: endTime}
-
 	// Query from database
-	logs, timeFilter, err := app.models.EmotionLog.GetList(id, filter)
+	logs, metadata, err := app.models.EmotionLog.GetList(id, filter)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -47,7 +62,7 @@ func (app *application) GetEmotionLogs(w http.ResponseWriter, r *http.Request) {
 
 	err = app.writeJson(w, http.StatusOK, envolope{
 		"emotion_logs": logs,
-		"filter":       timeFilter,
+		"metadata":     metadata,
 	}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
