@@ -48,12 +48,11 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 
 			for ip, client := range clients {
 				if time.Since(client.lastSeen) > 3*time.Minute {
-					if time.Since(client.lastSeen) > 3*time.Minute {
-						delete(clients, ip)
-					}
+					delete(clients, ip)
 				}
-				mu.Unlock()
 			}
+
+			mu.Unlock()
 		}
 	}()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

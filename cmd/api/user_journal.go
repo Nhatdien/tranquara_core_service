@@ -148,6 +148,9 @@ func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request
 		// Don't fail journal creation if streak update fails
 	}
 
+	// Publish journal to AI service for Qdrant indexing (non-blocking)
+	app.publishJournalToAI(newJournal)
+
 	err = app.writeJson(w, http.StatusCreated, newJournal, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -173,6 +176,9 @@ func (app *application) UpdateUserJournal(w http.ResponseWriter, r *http.Request
 		app.serverErrorResponse(w, r, err)
 		return
 	}
+
+	// Publish updated journal to AI service for Qdrant re-indexing (non-blocking)
+	app.publishJournalToAI(updatedJournal)
 
 	err = app.writeJson(w, http.StatusOK, updatedJournal, nil)
 	if err != nil {
