@@ -49,7 +49,8 @@ type JournalTemplate struct {
 	Title       string          `json:"title"`
 	Description *string         `json:"description,omitempty"`
 	Category    string          `json:"category"`
-	SlideGroups json.RawMessage `json:"slide_groups"` // JSONB stored as raw message
+	Type        string          `json:"type"` // "journal" or "learn"
+	SlideGroups json.RawMessage `json:"slide_groups"`
 	IsActive    bool            `json:"is_active"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
@@ -99,7 +100,7 @@ func (journal UserJournalModel) Get(id uuid.UUID, userID uuid.UUID) (*UserJourna
 
 func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 	query := `
-		SELECT id, title, description, category, slide_groups, is_active, created_at, updated_at 
+		SELECT id, title, description, category, type, slide_groups, is_active, created_at, updated_at 
 		FROM journal_templates
 		WHERE is_active = true
 		ORDER BY category, title
@@ -123,6 +124,7 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 			&journalTemplate.Title,
 			&journalTemplate.Description,
 			&journalTemplate.Category,
+			&journalTemplate.Type,
 			&journalTemplate.SlideGroups,
 			&journalTemplate.IsActive,
 			&journalTemplate.CreatedAt,

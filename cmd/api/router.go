@@ -65,5 +65,11 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/user_streaks", app.authMiddleWare(app.getUserStreakHandler))
 	router.HandlerFunc(http.MethodPut, "/v1/user_streaks", app.authMiddleWare(app.updateUserStreakHandler))
 
+	// Learned progress routes
+	router.HandlerFunc(http.MethodPost, "/v1/learned", app.authMiddleWare(app.CreateLearnedSlideGroup))
+	router.HandlerFunc(http.MethodGet, "/v1/learned", app.authMiddleWare(app.GetAllLearned))
+	router.HandlerFunc(http.MethodGet, "/v1/learned/:collection_id", app.authMiddleWare(app.GetLearnedByCollection))
+	router.HandlerFunc(http.MethodDelete, "/v1/learned/:id", app.authMiddleWare(app.DeleteLearnedSlideGroup))
+
 	return app.recoverPanic(app.rateLimit(router))
 }
