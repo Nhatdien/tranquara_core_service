@@ -64,3 +64,41 @@ func (app *application) publishJournalToAI(journal *data.UserJournal) {
 		"event":      "journal.index",
 	})
 }
+
+// JournalDeletePayload is the payload sent to AI service to remove a journal from Qdrant.
+type JournalDeletePayload struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+// publishJournalDeleteToAI publishes a journal delete event to the ai_tasks queue.
+// This removes the journal's vector from Qdrant so deleted content is no longer used in RAG.
+func (app *application) publishJournalDeleteToAI(journalID, userID uuid.UUID) {
+	if app.rabbitchannel == nil {
+		app.logger.PrintInfo("RabbitMQ not connected, skipping AI journal delete publish", nil)
+		return
+	}
+
+	message := AITaskMessage{
+		Event:     "journal.delete",
+		Timestamp: time.Now(),
+		Payload: JournalDeletePayload{
+			ID:     journalID,
+			UserID: userID,
+		},
+	}
+
+	err := pubsub.PublishJson(app.rabbitchannel, "", "ai_tasks", message)
+	if err != nil {
+		app.logger.PrintError(err, map[string]string{
+			"action":     "publish_journal_delete_to_ai",
+			"journal_id": journalID.String(),
+		})
+		return
+	}
+
+	app.logger.PrintInfo("published journal delete to AI service", map[string]string{
+		"journal_id": journalID.String(),
+		"event":      "journal.delete",
+	})
+}

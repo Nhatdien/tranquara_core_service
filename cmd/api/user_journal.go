@@ -16,7 +16,7 @@ func (app *application) GetUserJournal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	journalID, err := uuid.FromBytes([]byte(idParam))
+	journalID, err := uuid.Parse(idParam)
 	if err != nil {
 		http.Error(w, "Invalid 'id' format", http.StatusBadRequest)
 		return
@@ -193,9 +193,15 @@ func (app *application) DeleteUserJournal(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	journalID, err := uuid.FromBytes([]byte(idParam))
+	journalID, err := uuid.Parse(idParam)
 	if err != nil {
 		http.Error(w, "Invalid 'id' format", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := app.GetUserUUIDFromContext(r.Context())
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
@@ -208,6 +214,9 @@ func (app *application) DeleteUserJournal(w http.ResponseWriter, r *http.Request
 		app.serverErrorResponse(w, r, err)
 		return
 	}
+
+	// Remove journal vector from Qdrant (non-blocking)
+	app.publishJournalDeleteToAI(journalID, userID)
 
 	w.WriteHeader(http.StatusNoContent)
 }
