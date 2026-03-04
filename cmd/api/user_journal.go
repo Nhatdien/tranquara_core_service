@@ -120,7 +120,11 @@ func (app *application) GetAllTemplates(w http.ResponseWriter, r *http.Request) 
 }
 
 func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request) {
-	var input data.UserJournal
+	// Use a wrapper struct to capture skip_ai_indexing alongside journal data
+	var request struct {
+		data.UserJournal
+		SkipAIIndexing bool `json:"skip_ai_indexing"`
+	}
 
 	userID, err := app.GetUserUUIDFromContext(r.Context())
 	if err != nil {
@@ -128,15 +132,15 @@ func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = app.readJson(w, r, &input)
+	err = app.readJson(w, r, &request)
 	if err != nil {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
 	}
 
-	input.UserID = userID
+	request.UserJournal.UserID = userID
 
-	newJournal, err := app.models.UserJournal.Insert(&input)
+	newJournal, err := app.models.UserJournal.Insert(&request.UserJournal)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -149,7 +153,10 @@ func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request
 	}
 
 	// Publish journal to AI service for Qdrant indexing (non-blocking)
-	app.publishJournalToAI(newJournal)
+	// Skip if user has opted out of data collection
+	if !request.SkipAIIndexing {
+		app.publishJournalToAI(newJournal)
+	}
 
 	err = app.writeJson(w, http.StatusCreated, newJournal, nil)
 	if err != nil {
@@ -158,27 +165,33 @@ func (app *application) CreateUserJournal(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) UpdateUserJournal(w http.ResponseWriter, r *http.Request) {
-	var input data.UserJournal
+	var request struct {
+		data.UserJournal
+		SkipAIIndexing bool `json:"skip_ai_indexing"`
+	}
 
-	err := app.readJson(w, r, &input)
+	err := app.readJson(w, r, &request)
 	if err != nil {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
 	}
 
-	if input.ID == uuid.Nil {
+	if request.UserJournal.ID == uuid.Nil {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
 
-	updatedJournal, err := app.models.UserJournal.Update(&input)
+	updatedJournal, err := app.models.UserJournal.Update(&request.UserJournal)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 
 	// Publish updated journal to AI service for Qdrant re-indexing (non-blocking)
-	app.publishJournalToAI(updatedJournal)
+	// Skip if user has opted out of data collection
+	if !request.SkipAIIndexing {
+		app.publishJournalToAI(updatedJournal)
+	}
 
 	err = app.writeJson(w, http.StatusOK, updatedJournal, nil)
 	if err != nil {
