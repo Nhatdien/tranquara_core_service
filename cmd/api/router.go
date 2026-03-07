@@ -71,5 +71,15 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/learned/:collection_id", app.authMiddleWare(app.GetLearnedByCollection))
 	router.HandlerFunc(http.MethodDelete, "/v1/learned/:id", app.authMiddleWare(app.DeleteLearnedSlideGroup))
 
+	// AI Memory routes (public — requires user auth)
+	router.HandlerFunc(http.MethodGet, "/v1/ai-memories", app.authMiddleWare(app.listAIMemoriesHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/ai-memories/:id", app.authMiddleWare(app.deleteAIMemoryHandler))
+
+	// AI Memory routes (internal — called by AI service with API key)
+	router.HandlerFunc(http.MethodGet, "/v1/internal/active-journal-users", app.internalAuthMiddleware(app.internalGetActiveJournalUsersHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/internal/user-journals", app.internalAuthMiddleware(app.internalGetUserJournalsHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/internal/ai-memories/:user_id", app.internalAuthMiddleware(app.internalGetUserMemoriesHandler))
+	router.HandlerFunc(http.MethodPost, "/v1/internal/ai-memories/batch", app.internalAuthMiddleware(app.internalBatchCreateMemoriesHandler))
+
 	return app.recoverPanic(app.rateLimit(router))
 }

@@ -427,3 +427,47 @@ func (journal UserJournalModel) GetListWithFilter(userID uuid.UUID, filter *Quer
 
 	return userJournals, metadata, nil
 }
+
+// GetAllSince returns all journals for a user created or updated since the given time.
+// Used internally by the AI memory generation scheduler.
+func (journal UserJournalModel) GetAllSince(userID uuid.UUID, since time.Time) ([]*UserJournal, error) {
+	query := `
+		SELECT id, user_id, collection_id, title, content, content_html,
+		       mood_score, mood_label, created_at, updated_at
+		FROM user_journals
+		WHERE user_id = $1 AND updated_at >= $2
+		ORDER BY created_at DESC
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	rows, err := journal.DB.QueryContext(ctx, query, userID, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var journals []*UserJournal
+	for rows.Next() {
+		var uj UserJournal
+		err = rows.Scan(
+			&uj.ID,
+			&uj.UserID,
+			&uj.CollectionID,
+			&uj.Title,
+			&uj.Content,
+			&uj.ContentHTML,
+			&uj.MoodScore,
+			&uj.MoodLabel,
+			&uj.CreatedAt,
+			&uj.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		journals = append(journals, &uj)
+	}
+
+	return journals, rows.Err()
+}
