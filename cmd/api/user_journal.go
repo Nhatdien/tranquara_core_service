@@ -111,6 +111,22 @@ func (app *application) GetAllTemplates(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Check requested locale — if Vietnamese, swap in vi fields where available
+	locale := app.getLocale(r)
+	if locale == "vi" {
+		for _, t := range templates {
+			if t.TitleVi != nil && *t.TitleVi != "" {
+				t.Title = *t.TitleVi
+			}
+			if t.DescriptionVi != nil && *t.DescriptionVi != "" {
+				t.Description = t.DescriptionVi
+			}
+			if t.SlideGroupsVi != nil && len(t.SlideGroupsVi) > 2 { // not empty "[]"
+				t.SlideGroups = t.SlideGroupsVi
+			}
+		}
+	}
+
 	err = app.writeJson(w, http.StatusOK, envolope{
 		"templates": templates,
 	}, nil)

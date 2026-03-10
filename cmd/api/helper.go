@@ -161,3 +161,22 @@ func (app *application) loadPublicKey(path string) (*rsa.PublicKey, error) {
 
 	return pubKey, nil
 }
+
+// getLocale extracts the preferred language from the Accept-Language header.
+// Returns "vi" for Vietnamese, defaults to "en" for English or any other language.
+func (app *application) getLocale(r *http.Request) string {
+	acceptLang := r.Header.Get("Accept-Language")
+	if acceptLang == "" {
+		return "en"
+	}
+	// Simple parsing: check if "vi" appears before "en" or is the primary language
+	lower := strings.ToLower(acceptLang)
+	if strings.HasPrefix(lower, "vi") {
+		return "vi"
+	}
+	// Check query param override
+	if lang := r.URL.Query().Get("lang"); lang == "vi" {
+		return "vi"
+	}
+	return "en"
+}

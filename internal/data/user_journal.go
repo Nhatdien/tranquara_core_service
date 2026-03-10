@@ -45,15 +45,18 @@ type SlideData struct {
 }
 
 type JournalTemplate struct {
-	ID          uuid.UUID       `json:"id"`
-	Title       string          `json:"title"`
-	Description *string         `json:"description,omitempty"`
-	Category    string          `json:"category"`
-	Type        string          `json:"type"` // "journal" or "learn"
-	SlideGroups json.RawMessage `json:"slide_groups"`
-	IsActive    bool            `json:"is_active"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+	ID            uuid.UUID       `json:"id"`
+	Title         string          `json:"title"`
+	TitleVi       *string         `json:"title_vi,omitempty"`
+	Description   *string         `json:"description,omitempty"`
+	DescriptionVi *string         `json:"description_vi,omitempty"`
+	Category      string          `json:"category"`
+	Type          string          `json:"type"` // "journal" or "learn"
+	SlideGroups   json.RawMessage `json:"slide_groups"`
+	SlideGroupsVi json.RawMessage `json:"slide_groups_vi,omitempty"`
+	IsActive      bool            `json:"is_active"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
 type UserJournalModel struct {
@@ -100,7 +103,8 @@ func (journal UserJournalModel) Get(id uuid.UUID, userID uuid.UUID) (*UserJourna
 
 func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 	query := `
-		SELECT id, title, description, category, type, slide_groups, is_active, created_at, updated_at 
+		SELECT id, title, title_vi, description, description_vi, category, type, 
+		       slide_groups, slide_groups_vi, is_active, created_at, updated_at 
 		FROM journal_templates
 		WHERE is_active = true
 		ORDER BY category, title
@@ -122,10 +126,13 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 		err = rows.Scan(
 			&journalTemplate.ID,
 			&journalTemplate.Title,
+			&journalTemplate.TitleVi,
 			&journalTemplate.Description,
+			&journalTemplate.DescriptionVi,
 			&journalTemplate.Category,
 			&journalTemplate.Type,
 			&journalTemplate.SlideGroups,
+			&journalTemplate.SlideGroupsVi,
 			&journalTemplate.IsActive,
 			&journalTemplate.CreatedAt,
 			&journalTemplate.UpdatedAt,
