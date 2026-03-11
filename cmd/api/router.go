@@ -81,5 +81,17 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/internal/ai-memories/:user_id", app.internalAuthMiddleware(app.internalGetUserMemoriesHandler))
 	router.HandlerFunc(http.MethodPost, "/v1/internal/ai-memories/batch", app.internalAuthMiddleware(app.internalBatchCreateMemoriesHandler))
 
+	// Therapy Toolkit — Session routes
+	router.HandlerFunc(http.MethodPost, "/v1/therapy-sessions", app.authMiddleWare(app.createSessionHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/therapy-sessions", app.authMiddleWare(app.listSessionsHandler))
+	router.HandlerFunc(http.MethodPut, "/v1/therapy-sessions", app.authMiddleWare(app.updateSessionHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/therapy-sessions", app.authMiddleWare(app.deleteSessionHandler))
+
+	// Therapy Toolkit — Homework routes
+	router.HandlerFunc(http.MethodPost, "/v1/homework", app.authMiddleWare(app.createHomeworkHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/homework", app.authMiddleWare(app.listHomeworkHandler))
+	router.HandlerFunc(http.MethodPatch, "/v1/homework", app.authMiddleWare(app.toggleHomeworkHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/homework", app.authMiddleWare(app.deleteHomeworkHandler))
+
 	return app.recoverPanic(app.rateLimit(router))
 }

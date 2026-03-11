@@ -123,6 +123,9 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 
 	for rows.Next() {
 		var journalTemplate JournalTemplate
+		var slideGroupsRaw []byte
+		var slideGroupsViRaw []byte
+
 		err = rows.Scan(
 			&journalTemplate.ID,
 			&journalTemplate.Title,
@@ -131,8 +134,8 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 			&journalTemplate.DescriptionVi,
 			&journalTemplate.Category,
 			&journalTemplate.Type,
-			&journalTemplate.SlideGroups,
-			&journalTemplate.SlideGroupsVi,
+			&slideGroupsRaw,
+			&slideGroupsViRaw,
 			&journalTemplate.IsActive,
 			&journalTemplate.CreatedAt,
 			&journalTemplate.UpdatedAt,
@@ -140,6 +143,13 @@ func (journal UserJournalModel) GetAllTemplates() ([]*JournalTemplate, error) {
 
 		if err != nil {
 			return nil, err
+		}
+
+		if slideGroupsRaw != nil {
+			journalTemplate.SlideGroups = json.RawMessage(slideGroupsRaw)
+		}
+		if slideGroupsViRaw != nil {
+			journalTemplate.SlideGroupsVi = json.RawMessage(slideGroupsViRaw)
 		}
 
 		journalTemplates = append(journalTemplates, &journalTemplate)

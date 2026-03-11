@@ -20,6 +20,8 @@ type Models struct {
 	UserJournal           UserJournalModel
 	UserLearnedSlideGroup UserLearnedSlideGroupModel
 	AIMemory              AIMemoryModel
+	TherapySession        TherapySessionModel
+	HomeworkItem          HomeworkItemModel
 }
 
 func NewModels(db *sql.DB) Models {
@@ -34,6 +36,8 @@ func NewModels(db *sql.DB) Models {
 		UserJournal:           UserJournalModel{DB: db},
 		UserLearnedSlideGroup: UserLearnedSlideGroupModel{DB: db},
 		AIMemory:              AIMemoryModel{DB: db},
+		TherapySession:        TherapySessionModel{DB: db},
+		HomeworkItem:          HomeworkItemModel{DB: db},
 	}
 
 }
