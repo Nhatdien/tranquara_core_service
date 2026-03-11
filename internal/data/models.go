@@ -22,6 +22,7 @@ type Models struct {
 	AIMemory              AIMemoryModel
 	TherapySession        TherapySessionModel
 	HomeworkItem          HomeworkItemModel
+	PrepPack              PrepPackModel
 }
 
 func NewModels(db *sql.DB) Models {
@@ -38,6 +39,7 @@ func NewModels(db *sql.DB) Models {
 		AIMemory:              AIMemoryModel{DB: db},
 		TherapySession:        TherapySessionModel{DB: db},
 		HomeworkItem:          HomeworkItemModel{DB: db},
+		PrepPack:              PrepPackModel{DB: db},
 	}
 
 }

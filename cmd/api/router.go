@@ -91,5 +91,11 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/homework", app.authMiddleWare(app.toggleHomeworkHandler))
 	router.HandlerFunc(http.MethodDelete, "/v1/homework", app.authMiddleWare(app.deleteHomeworkHandler))
 
+	// Therapy Toolkit — Prep Pack routes
+	router.HandlerFunc(http.MethodPost, "/v1/prep-packs", app.authMiddleWare(app.createPrepPackHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/prep-packs", app.authMiddleWare(app.listPrepPacksHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/prep-packs/detail", app.authMiddleWare(app.getPrepPackHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/prep-packs", app.authMiddleWare(app.deletePrepPackHandler))
+
 	return app.recoverPanic(app.rateLimit(router))
 }
